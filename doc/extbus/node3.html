@@ -1,0 +1,230 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!--Converted with LaTeX2HTML 98.1p1 release (March 2nd, 1998)
+originally by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>Read accesses</TITLE>
+<META NAME="description" CONTENT="Read accesses">
+<META NAME="keywords" CONTENT="bustim">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<LINK REL="STYLESHEET" HREF="bustim.css">
+<LINK REL="next" HREF="node4.html">
+<LINK REL="previous" HREF="node2.html">
+<LINK REL="up" HREF="node2.html">
+<LINK REL="next" HREF="node4.html">
+</HEAD>
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html48"
+ HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html46"
+ HREF="node2.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html40"
+ HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html49"
+ HREF="node4.html">Write accesses</A>
+<B> Up:</B> <A NAME="tex2html47"
+ HREF="node2.html">Timing of the accesses</A>
+<B> Previous:</B> <A NAME="tex2html41"
+ HREF="node2.html">Timing of the accesses</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<H2><A NAME="SECTION00021000000000000000">
+Read accesses</A>
+</H2>
+
+<P>
+Figure <A HREF="node3.html#rd-dev-tim"><IMG  ALIGN="BOTTOM" BORDER="1" ALT="[*]"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/cross_ref_motif.gif"></A> illustrates the read access graphically.
+
+<P>
+At the activating edge of /CS addresses and the RW signal have to be
+stable a certain time before.
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<IMG
+ WIDTH="300" HEIGHT="84"
+ SRC="img3.gif"
+ ALT="\begin{eqnarray*}10 = t_{avcl} &<& t_{avsa} = (15,10,8)\\
+(10,0) = t_{wlcl} &<& t_{raaa} = (15,10,10)\\
+\end{eqnarray*}">
+</DIV><P></P>
+<BR CLEAR="ALL">
+<P>
+A method to guarantee the setup time for the PCD8584 in th case of a
+25MHz CPU
+would delay the /CS artificially. Since this is a setup time and a
+worst case analysis, we can also state the following. In normal cases,
+i.e. proper power supply, decent ambient temperature, the worst case
+will never happen. If it happens the CPU speed will be reduced
+slightly.
+
+<P>
+For the recognition and proper save of the data value, there are two
+times relevant: the time when the data bus is stable and the time when
+/DACK is stable on the external bus.
+
+<P>
+The data bus driver ABT652 and the /DACKO output of the GAL are
+enabled with the /CS. Since it takes quite a while until the busmaster
+device generates a response, only the propagation delays of the
+interface logic is of interest. In a bus cycle without wait states,
+/DACK will be clocked at the beginning of S3 whereas the data bus will
+be latched at the beginning of S5. With <I>i</I> the number of wait state
+cycles, the following has to be obeyed. For the data bus it is
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<IMG
+ WIDTH="481" HEIGHT="195"
+ SRC="img4.gif"
+ ALT="\begin{eqnarray*}& & t_{dat}^+ + t_{dicl} < (5/2 + i) T\\
+&\Leftrightarrow& t_{...
+...40) - (25,23,19) > (191.7,188.7)\\
+&\Rightarrow& i = (2,3,4)\\
+\end{eqnarray*}">
+</DIV><P></P>
+<BR CLEAR="ALL">
+<P>
+and for the /DACK signal it is
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<IMG
+ WIDTH="471" HEIGHT="168"
+ SRC="img5.gif"
+ ALT="\begin{eqnarray*}& & t_{cs}^+ + t_{cldl} + t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 ...
+...,19) > (336.7,677.7)\\
+&\Rightarrow& i = ((6,7,8)(11,14,17))\\
+\end{eqnarray*}">
+</DIV><P></P>
+<BR CLEAR="ALL">
+<P>
+<BR>
+<DIV ALIGN="CENTER"><A NAME="rd-dev-tim">&#160;</A><A NAME="348">&#160;</A>
+<TABLE WIDTH="50%">
+<CAPTION><STRONG>Figure:</STRONG>
+Timing of a read access</CAPTION>
+<TR><TD><IMG
+ WIDTH="345" HEIGHT="447"
+ SRC="img6.gif"
+ ALT="\begin{figure}\begin{center}\makebox{\epsfysize=100mm \epsfbox{rd-dev-tim.eps}} \end{center} \end{figure}"></TD></TR>
+</TABLE>
+</DIV>
+<BR>
+<P>
+At the disableing edge of /CS there are 3 limitations. First, the data
+bus has to be stable until after the hold time of the CPU
+port. Second, the data bus and the /DACK signal must not be actively
+driven until after the disable time of the CPU (which is roughly the
+start of the next cycle).
+
+<P>
+The data bus is hold until the data bus interface chip is disabled
+through the GAL.
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+0 = t_{sndi} < t_{pd}^-(i,o)[GAL] + t_{dis}^-[abt652] = 1.0 + 1.3 = 2.3
+\end{displaymath} -->
+
+
+0 = <I>t</I><SUB><I>sndi</I></SUB> &lt; <I>t</I><SUB><I>pd</I></SUB><SUP>-</SUP>(<I>i</I>,<I>o</I>)[<I>GAL</I>] + <I>t</I><SUB><I>dis</I></SUB><SUP>-</SUP>[<I>abt</I>652] = 1.0 + 1.3 = 2.3
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+At latest the data bus is disabled after the maxmimum times in the
+equation above.
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+(55,48,45) t_{shdi} > t_{pd}^+(i,o)[GAL] + t_{dis}^+[abt652] =
+10.0 + 8.5 = 18.5 
+\end{displaymath} -->
+
+
+(55,48,45) <I>t</I><SUB><I>shdi</I></SUB> &gt; <I>t</I><SUB><I>pd</I></SUB><SUP>+</SUP>(<I>i</I>,<I>o</I>)[<I>GAL</I>] + <I>t</I><SUB><I>dis</I></SUB><SUP>+</SUP>[<I>abt</I>652] = 
+10.0 + 8.5 = 18.5
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+With the same edge also the /DACK is disabled. The disable time of the
+output port of the GAL is enlarged by a small <IMG
+ WIDTH="12" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ SRC="img7.gif"
+ ALT="$\epsilon$">
+due to the
+pullup resistor.
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+(80,60,50) = t_{sndn}^+ > t_{dis}^+[GAL] + \epsilon = 9 + \epsilon
+\end{displaymath} -->
+
+
+<IMG
+ WIDTH="346" HEIGHT="33"
+ SRC="img8.gif"
+ ALT="\begin{displaymath}(80,60,50) = t_{sndn}^+ > t_{dis}^+[GAL] + \epsilon = 9 + \epsilon \end{displaymath}">
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html48"
+ HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html46"
+ HREF="node2.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html40"
+ HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html49"
+ HREF="node4.html">Write accesses</A>
+<B> Up:</B> <A NAME="tex2html47"
+ HREF="node2.html">Timing of the accesses</A>
+<B> Previous:</B> <A NAME="tex2html41"
+ HREF="node2.html">Timing of the accesses</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+<I>Thomas Walle</I>
+<BR><I>1999-05-18</I>
+</ADDRESS>
+</BODY>
+</HTML>

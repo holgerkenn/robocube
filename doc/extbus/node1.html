@@ -1,0 +1,185 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!--Converted with LaTeX2HTML 98.1p1 release (March 2nd, 1998)
+originally by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>General control</TITLE>
+<META NAME="description" CONTENT="General control">
+<META NAME="keywords" CONTENT="bustim">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<LINK REL="STYLESHEET" HREF="bustim.css">
+<LINK REL="next" HREF="node2.html">
+<LINK REL="previous" HREF="bustim.html">
+<LINK REL="up" HREF="bustim.html">
+<LINK REL="next" HREF="node2.html">
+</HEAD>
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html25"
+ HREF="node2.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html23"
+ HREF="bustim.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html17"
+ HREF="bustim.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html26"
+ HREF="node2.html">Timing of the accesses</A>
+<B> Up:</B> <A NAME="tex2html24"
+ HREF="bustim.html">Interface to I</SUP>C bus</A>
+<B> Previous:</B> <A NAME="tex2html18"
+ HREF="bustim.html">Interface to I</SUP>C bus</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<H1><A NAME="SECTION00010000000000000000">
+General control</A>
+</H1>
+
+<P>
+The problem of the externel devices consists in the possibly very long
+disable time of the data acknowledge signal (DSACK) and the data bus for
+read accesses. Furthermore, the DUART has a very long hold time for the
+data in a write access.
+
+<P>
+To overcome this, we insert a bidirectional driver with internal registers
+into the data bus. Each port of the driver is controlled by 3 signals:
+
+<P>
+<DL>
+<DT><STRONG>SRCSEL</STRONG>
+<DD>selects from source the output is fed -- the internal
+register for this direction or the other port
+<DT><STRONG>CLK</STRONG>
+<DD>clocks data from the other port into the internal register
+<DT><STRONG>/OE</STRONG>
+<DD>output enable for the port
+</DL>
+<P>
+The CPU side port is activated for read accesses by /RDOE. Basically, 
+it runs with the according chip select.
+
+<P>
+A direct write after an read access to some external bus master would
+due to the large disable time conflict with the still driving master
+and cause bus contention. But luckily there has to be a fetch after
+the access and in the meantime the external bus has disabled its data
+bus interface. Even for fast loops, where there is no fetching, the
+next cycle is completely internal (update and test internal counter).
+
+<P>
+In write cycles the chip select is enabled as early as the data strobe
+(/DS). Since the computation of the /WROE takes some time and the
+external bus controller expects valid data with the chip select going
+low, we enable the data bus driver with the write signal (/RW), that
+is valid after the first half clock cycle of the access. Consequently,
+in every write cycle the data bus driver is enabled. To ensure the
+large hold time specification of the DUART the /WROE signal is
+registered. Since the RW signal changes its state as early as in the
+first clock cycle of the next bus cycle, the data port is still active
+one clock cycle after the write access. To deliver valid data as long
+as possible, the port's source is switched to the internal register
+with the negated /AS signal. Thus, data is valid early in the
+beginning of the write cycle and gets invalid when the next read cycle
+starts.
+
+<P>
+The data acknowledge signal is handled in the same way as the data bus is.
+Since it is unidirectional, the driver is implemented in the GAL.
+The computattion of the enable signal needs to cover several cases and
+thus, the logic equation contains some 'or'. But the GAL offers only
+one term. Consequently, a seperate output is used for its computation.
+
+<P>
+A second issue is the interupt acknowledge cycle. It is basically a read
+cycle, but there is no chip select set. Hence, the cycle has to be decoded
+by the GAL. Such a cycle is recognized by the two low order function code
+bits (FC1, FC0) beeing 1 and address bit A0 beeing 1 as well. Address bits
+A1,...,A3 give the interupt level. This is sufficient because the lowest
+address bit distinguishes between other CPU space cycles. Due to lack
+of input pins A0 is not decoded. In selecting only unequal interupt
+levels, i.e. A1 is always 1 in this case, this distinguishes the
+interupt acknowledge cycles for these devices from other CPU cycles.
+
+<P>
+Finally, the resulting equations for the GAL.
+
+<P><PRE>
+GAL22V10
+
+CK EQ RW /AS FC1 FC0 A3 A2 A1 /CS5 /CS2 GND
+/CS1 /DACKI DACKOE /IACK1 /IACK3 /IACK5 RDOE /WROE WRCK /REGCE /DACKO VCC
+
+
+RDOE = (/CS1 + /CS2 + /CS5)*RW + /IACK1 + /IACK3 + IACK5;
+
+/IACK1 = /AS*RW*FC1*FC0*/A3*/A2*A1;    //IRQ1 --&gt; I2CB
+/IACK3 = /AS*RW*FC1*FC0*/A3*A2*A1;     //IRQ3 --&gt; I2CA
+/IACK5 = /AS*RW*FC1*FC0*A3*/A2*A1;     //IRQ5 --&gt; DUART
+
+/WROE := /RW;
+
+WRCK = (CS1 + CS2 + CS5)*/RW;
+
+DACKOE = /CS1 + /CS2 + /CS5 + /IACK1 + /IACK3 + /IACK5;
+/DACKO.OE = DACKOE;
+/DACKO = /DACKI;
+
+//----------------------------------------------------------
+
+/REGCE := /AS*/RW*/FC1*FC0*EQ*REGCE    //on with adr valid and /AS
+       +     /RW*/FC1*FC0*EQ*/REGCE;   //off with read or adr invalid
+</PRE>
+<P>
+In the lower part of the definition of the GAL-equations the clock enable
+for the binary output is given. The register is clocked with the /DS signal.
+The clock is enabled after recognition of a valid address and an active
+address strobe (/AS). It is disabled again when the address gets invalid or
+the next read cycle starts. This is certainly before the next clock.
+
+<P>
+The GAL registers are automatically reset after during power up. Thus, the
+write enable of the data bus driver and the clock enable of the binary
+output register are both invalid.
+
+<P>
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html25"
+ HREF="node2.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html23"
+ HREF="bustim.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html17"
+ HREF="bustim.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html26"
+ HREF="node2.html">Timing of the accesses</A>
+<B> Up:</B> <A NAME="tex2html24"
+ HREF="bustim.html">Interface to I</SUP>C bus</A>
+<B> Previous:</B> <A NAME="tex2html18"
+ HREF="bustim.html">Interface to I</SUP>C bus</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+<I>Thomas Walle</I>
+<BR><I>1999-05-18</I>
+</ADDRESS>
+</BODY>
+</HTML>

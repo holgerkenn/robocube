@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!--Converted with LaTeX2HTML 98.1p1 release (March 2nd, 1998)
+originally by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>Interupt request cycles</TITLE>
+<META NAME="description" CONTENT="Interupt request cycles">
+<META NAME="keywords" CONTENT="bustim">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<LINK REL="STYLESHEET" HREF="bustim.css">
+<LINK REL="previous" HREF="node4.html">
+<LINK REL="up" HREF="node2.html">
+<LINK REL="next" HREF="node6.html">
+</HEAD>
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html66"
+ HREF="node6.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html64"
+ HREF="node2.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html60"
+ HREF="node4.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html67"
+ HREF="node6.html">Timing of the accesses</A>
+<B> Up:</B> <A NAME="tex2html65"
+ HREF="node2.html">Timing of the accesses</A>
+<B> Previous:</B> <A NAME="tex2html61"
+ HREF="node4.html">Write accesses</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<H2><A NAME="SECTION00023000000000000000">
+Interupt request cycles</A>
+</H2>
+
+<P>
+An interupt request cycle is basically a read access to the device
+with the only difference, that the CPU uses no /CS and therefore the
+chip selects have to be decoded out of the address
+bus. Instead of a chip select the device looks for a signal with
+the same meaning on its /IACK port. Figure <A HREF="node5.html#ir-dev-tim"><IMG  ALIGN="BOTTOM" BORDER="1" ALT="[*]"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/cross_ref_motif.gif"></A>
+illustrates the access.
+
+<P>
+<BR>
+<DIV ALIGN="CENTER"><A NAME="ir-dev-tim">&#160;</A><A NAME="372">&#160;</A>
+<TABLE WIDTH="50%">
+<CAPTION><STRONG>Figure:</STRONG>
+<</CAPTION>
+<TR><TD><IMG
+ WIDTH="343" HEIGHT="447"
+ SRC="img17.gif"
+ ALT="\begin{figure}\begin{center}\makebox{\epsfysize=100mm \epsfbox{ir-dev-tim.eps}} \end{center} \end{figure}"></TD></TR>
+</TABLE>
+</DIV>
+<BR>
+tex2html_comment_mark>
+Timing of a interupt acknowledge cycle
+
+<P>
+The differences in respect to the timing analysis only come only
+through a little later start of the access out of the view from the
+busmaster device. Because the /IACK has to
+be decoded out of the address bits, the activating edge of /IACK is a
+little later than an ordinary /CS would be. But this makes the setup
+conditions on that edge even more relexed and the hold time conditions
+have never been a problem. More precisely, we get
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<IMG
+ WIDTH="435" HEIGHT="84"
+ SRC="img18.gif"
+ ALT="\begin{eqnarray*}10 = t_{avcl} &<& t_{avsa} + t_{pd}^-(i,o)[GAL] = (16,11,9)\\
+(10,0) = t_{wlcl} &<& t_{raaa} + t_{pd}^-(i,o)[GAL] = (16,11,11)\\
+\end{eqnarray*}">
+</DIV><P></P>
+<BR CLEAR="ALL">
+<P>
+Consequently, the device will generate a later response to that
+starting edge, i.e.
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<IMG
+ WIDTH="493" HEIGHT="168"
+ SRC="img19.gif"
+ ALT="\begin{eqnarray*}& & t_{cs}^+ + t_{cldl} + 2 \cdot t_{pd}^+(i,o)[GAL] +
+t_{aist}...
+...,19) > (343.4,684.4)\\
+&\Rightarrow& i = ((6,7,8)(11,14,17))\\
+\end{eqnarray*}">
+</DIV><P></P>
+<BR CLEAR="ALL">
+<P>
+The rest of the access is completely congruent to the read access.
+
+<P>
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html66"
+ HREF="node6.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html64"
+ HREF="node2.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html60"
+ HREF="node4.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html67"
+ HREF="node6.html">Timing of the accesses</A>
+<B> Up:</B> <A NAME="tex2html65"
+ HREF="node2.html">Timing of the accesses</A>
+<B> Previous:</B> <A NAME="tex2html61"
+ HREF="node4.html">Write accesses</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+<I>Thomas Walle</I>
+<BR><I>1999-05-18</I>
+</ADDRESS>
+</BODY>
+</HTML>

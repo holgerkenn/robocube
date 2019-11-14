@@ -1,0 +1,309 @@
+\batchmode
+\documentclass[12pt]{article}
+\makeatletter
+
+\textwidth=6in
+\textheight=9in
+\parindent=0in
+\parskip=1ex
+\voffset=-1in
+ 
+\input{epsf}
+ 
+\providecommand{\bi}{\begin{itemize}}
+\providecommand{\ei}{\end{itemize}}
+\providecommand{\bd}{\begin{description}}
+\providecommand{\ed}{\end{description}}
+\providecommand{\be}{\begin{enumerate}}
+\providecommand{\ee}{\end{enumerate}}
+
+\providecommand{\isc}{$I^2C$ }
+\providecommand{\btab}[1]{\begin{table}\begin{center}\begin{tabular}{#1}}
+\providecommand{\etab}[2]{\end{tabular}\caption{\label{#1} #2} %
+\end{center}\end{table}}
+\providecommand{\myfig}[4]{%
+\begin{figure}[htbp] \begin{center}%
+\makebox{\epsfysize=#2 \epsfbox{#1}} \caption{\label{#3} #4} %
+\end{center} \end{figure}}
+\providecommand{\beqn}{\begin{eqnarray*}}
+\providecommand{\eeqn}{\end{eqnarray*}}
+
+\title{Interface to $I^2C$\ bus driver and DUART}
+\author{Thomas Walle}
+\par\usepackage[dvips]{color}
+\pagecolor[gray]{.7}
+
+
+\makeatletter
+\count@=\the\catcode`\_ \catcode`\_=8 
+\newenvironment{tex2html_wrap}{}{} \catcode`\_=\count@
+\makeatother
+\let\mathon=$
+\let\mathoff=$
+\ifx\AtBeginDocument\undefined \newcommand{\AtBeginDocument}[1]{}\fi
+\newbox\sizebox
+\setlength{\hoffset}{0pt}\setlength{\voffset}{0pt}
+\addtolength{\textheight}{\footskip}\setlength{\footskip}{0pt}
+\addtolength{\textheight}{\topmargin}\setlength{\topmargin}{0pt}
+\addtolength{\textheight}{\headheight}\setlength{\headheight}{0pt}
+\addtolength{\textheight}{\headsep}\setlength{\headsep}{0pt}
+\setlength{\textwidth}{349pt}
+\newwrite\lthtmlwrite
+\makeatletter
+\let\realnormalsize=\normalsize
+\global\topskip=2sp
+\def\preveqno{}\let\real@float=\@float \let\realend@float=\end@float
+\def\@float{\let\@savefreelist\@freelist\real@float}
+\def\end@float{\realend@float\global\let\@freelist\@savefreelist}
+\let\real@dbflt=\@dbflt \let\end@dblfloat=\end@float
+\let\@largefloatcheck=\relax
+\def\@dbflt{\let\@savefreelist\@freelist\real@dbflt}
+\def\adjustnormalsize{\def\normalsize{\mathsurround=0pt \realnormalsize
+ \parindent=0pt\abovedisplayskip=0pt\belowdisplayskip=0pt}\normalsize}%
+\def\lthtmltypeout#1{{\let\protect\string\immediate\write\lthtmlwrite{#1}}}%
+\newcommand\lthtmlhboxmathA{\adjustnormalsize\setbox\sizebox=\hbox\bgroup}%
+\newcommand\lthtmlvboxmathA{\adjustnormalsize\setbox\sizebox=\vbox\bgroup%
+ \let\ifinner=\iffalse }%
+\newcommand\lthtmlboxmathZ{\@next\next\@currlist{}{\def\next{\voidb@x}}%
+ \expandafter\box\next\egroup}%
+\newcommand\lthtmlmathtype[1]{\def\lthtmlmathenv{#1}}%
+\newcommand\lthtmllogmath{\lthtmltypeout{l2hSize %
+:\lthtmlmathenv:\the\ht\sizebox::\the\dp\sizebox::\the\wd\sizebox.\preveqno}}%
+\newcommand\lthtmlfigureA[1]{\let\@savefreelist\@freelist
+       \lthtmlmathtype{#1}\lthtmlvboxmathA}%
+\newcommand\lthtmlfigureZ{\lthtmlboxmathZ\lthtmllogmath\copy\sizebox
+       \global\let\@freelist\@savefreelist}%
+\newcommand\lthtmldisplayA[1]{\lthtmlmathtype{#1}\lthtmlvboxmathA}%
+\newcommand\lthtmldisplayB[1]{\edef\preveqno{(\theequation)}%
+  \lthtmldisplayA{#1}\let\@eqnnum\relax}%
+\newcommand\lthtmldisplayZ{\lthtmlboxmathZ\lthtmllogmath\lthtmlsetmath}%
+\newcommand\lthtmlinlinemathA[1]{\lthtmlmathtype{#1}\lthtmlhboxmathA  \vrule height1.5ex width0pt }%
+\newcommand\lthtmlinlineA[1]{\lthtmlmathtype{#1}\lthtmlhboxmathA}%
+\newcommand\lthtmlinlineZ{\egroup\expandafter\ifdim\dp\sizebox>0pt %
+  \expandafter\centerinlinemath\fi\lthtmllogmath\lthtmlsetinline}
+\newcommand\lthtmlinlinemathZ{\egroup\expandafter\ifdim\dp\sizebox>0pt %
+  \expandafter\centerinlinemath\fi\lthtmllogmath\lthtmlsetmath}
+\def\lthtmlsetinline{\hbox{\vrule width.1em\vtop{\vbox{%
+  \kern.1em\copy\sizebox}\ifdim\dp\sizebox>0pt\kern.1em\else\kern.3pt\fi
+  \ifdim\hsize>\wd\sizebox \hrule depth1pt\fi}}}
+\def\lthtmlsetmath{\hbox{\vrule width.1em\vtop{\vbox{%
+  \kern.1em\kern0.8 pt\hbox{\hglue.17em\copy\sizebox\hglue0.8 pt}}\kern.3pt%
+  \ifdim\dp\sizebox>0pt\kern.1em\fi \kern0.8 pt%
+  \ifdim\hsize>\wd\sizebox \hrule depth1pt\fi}}}
+\def\centerinlinemath{%\dimen1=\ht\sizebox
+  \dimen1=\ifdim\ht\sizebox<\dp\sizebox \dp\sizebox\else\ht\sizebox\fi
+  \advance\dimen1by.5pt \vrule width0pt height\dimen1 depth\dimen1 
+ \dp\sizebox=\dimen1\ht\sizebox=\dimen1\relax}
+
+\def\lthtmlcheckvsize{\ifdim\ht\sizebox<\vsize\expandafter\vfill
+  \else\expandafter\vss\fi}%
+\makeatletter \tracingstats = 1 
+
+
+\begin{document}
+\pagestyle{empty}\thispagestyle{empty}%
+\lthtmltypeout{latex2htmlLength hsize=\the\hsize}%
+\lthtmltypeout{latex2htmlLength vsize=\the\vsize}%
+\lthtmltypeout{latex2htmlLength hoffset=\the\hoffset}%
+\lthtmltypeout{latex2htmlLength voffset=\the\voffset}%
+\lthtmltypeout{latex2htmlLength topmargin=\the\topmargin}%
+\lthtmltypeout{latex2htmlLength topskip=\the\topskip}%
+\lthtmltypeout{latex2htmlLength headheight=\the\headheight}%
+\lthtmltypeout{latex2htmlLength headsep=\the\headsep}%
+\lthtmltypeout{latex2htmlLength parskip=\the\parskip}%
+\lthtmltypeout{latex2htmlLength oddsidemargin=\the\oddsidemargin}%
+\makeatletter
+\if@twoside\lthtmltypeout{latex2htmlLength evensidemargin=\the\evensidemargin}%
+\else\lthtmltypeout{latex2htmlLength evensidemargin=\the\oddsidemargin}\fi%
+\makeatother
+{\newpage\clearpage
+\lthtmlfigureA{figure307}%
+\begin{figure} \begin{center} \makebox{\epsfysize=150mm \epsfbox{bus-embed.eps}}   \end{center} \end{figure}%
+\lthtmlfigureZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+\stepcounter{section}
+\stepcounter{section}
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar319}%
+\begin{eqnarray*}t_{adr} &=& t_{chav}\\
+t_{rw} &=& t_{chrl}\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+\stepcounter{subsection}
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar339}%
+\begin{eqnarray*}10 = t_{avcl} &<& t_{avsa} = (15,10,8)\\
+(10,0) = t_{wlcl} &<& t_{raaa} = (15,10,10)\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar341}%
+\begin{eqnarray*}& & t_{dat}^+ + t_{dicl} < (5/2 + i) T\\
+&\Leftrightarrow& t_{cs}^+ + t_{cldv} + t_{pd}^+(i,o)[GAL] +
+t_{dicl} < (5/2 + i) T\\
+&\Leftrightarrow& T/2 + t_{clsa^+} + t_{cldv} + t_{pd}^+(i,o)[GAL] +
+t_{dicl} < (5/2 + i) T\\
+&\Leftrightarrow& (i+2) T > t_{clsa}^+ + t_{cldv} + 6.7 + t_{dicl}\\
+&\Leftrightarrow& (i+2)(60,50,40) - (25,23,19) > (191.7,188.7)\\
+&\Rightarrow& i = (2,3,4)\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar343}%
+\begin{eqnarray*}& & t_{cs}^+ + t_{cldl} + t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& T/2 + t_{clsa}^+ + t_{cldl} + t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& (i+1) T > t_{clsa}^+ + t_{cldl} +  6.7 + t_{aist}\\
+&\Leftrightarrow& (i+1)(60,50,40) - (25,23,19) > (336.7,677.7)\\
+&\Rightarrow& i = ((6,7,8)(11,14,17))\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmlfigureA{figure345}%
+\begin{figure} \begin{center} \makebox{\epsfysize=100mm \epsfbox{rd-dev-tim.eps}}   \end{center} \end{figure}%
+\lthtmlfigureZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmlinlinemathA{tex2html_wrap_inline523}%
+$\epsilon$%
+\lthtmlinlinemathZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{displaymath388}%
+\begin{displaymath}(80,60,50) = t_{sndn}^+ > t_{dis}^+[GAL] + \epsilon = 9 + \epsilon \end{displaymath}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+\stepcounter{subsection}
+{\newpage\clearpage
+\lthtmldisplayA{displaymath390}%
+\begin{displaymath}\Rightarrow (60,50,40) = T > t_{chrl}^+ + 7.0 = (36,30,26) \end{displaymath}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar353}%
+\begin{eqnarray*}t_{db}^+ = max \{ && t_{as}^+ + t_{pd}^+(s,o)[abt652],  \\
+&& t_{wroe}^+ + t_{pd}^+(oe,o)[abt652],\\
+&& t_{dat}^+ + t_{pd}^+(i,o)[abt652] \} \\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmlfigureA{figure355}%
+\begin{figure} \begin{center} \makebox{\epsfysize=100mm \epsfbox{wr-dev-tim.eps}}   \end{center} \end{figure}%
+\lthtmlfigureZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmlinlinemathA{tex2html_wrap_inline525}%
+$T \ge 40$%
+\lthtmlinlinemathZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar363}%
+\begin{eqnarray*}10 = t_{avcl} &<& t_{cs}^- - t_{adr}^+ = (63,52,41)\\
+(10,0)= t_{wlcl} &<& t_{rasa} = (70,54,40)\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{displaymath394}%
+\begin{displaymath}t_s[abt652] < t_{dvsa} + t_{pd}^-(i,o)[GAL] \Leftrightarrow
+(15,10,8) = t_{dvsa} > ... - 1.0 \end{displaymath}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar365}%
+\begin{eqnarray*}(0,?) = t_{chai} &<& t_{snai} = (15,10,8)\\
+0 = t_{chwh} &<& t_{snrn} = (15,10,10)\\
+? = t_{chdi} &<& t_h(db)\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar367}%
+\begin{eqnarray*}t_h(db) &=& min \{ t_{as}^- , t_{wroe}^- \}\\
+&=& \{ T/2 + t_{clsa}^- , T + t_{pd}^-(ck,o)[GAL] \}\\
+&=& T/2 + t_{clsa}^- = (32,25,20)\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+\stepcounter{subsection}
+{\newpage\clearpage
+\lthtmlfigureA{figure369}%
+\begin{figure} \begin{center} \makebox{\epsfysize=100mm \epsfbox{ir-dev-tim.eps}}   \end{center} \end{figure}%
+\lthtmlfigureZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar377}%
+\begin{eqnarray*}10 = t_{avcl} &<& t_{avsa} + t_{pd}^-(i,o)[GAL] = (16,11,9)\\
+(10,0) = t_{wlcl} &<& t_{raaa} + t_{pd}^-(i,o)[GAL] = (16,11,11)\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar379}%
+\begin{eqnarray*}& & t_{cs}^+ + t_{cldl} + 2 \cdot t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& T/2 + t_{clsa}^+ + t_{cldl} + 2 \cdot t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& (i+1) T > t_{clsa}^+ + t_{cldl} +  13.4 + t_{aist}\\
+&\Leftrightarrow& (i+1)(60,50,40) - (25,23,19) > (343.4,684.4)\\
+&\Rightarrow& i = ((6,7,8)(11,14,17))\\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+\stepcounter{section}
+{\newpage\clearpage
+\lthtmldisplayA{eqnarraystar381}%
+\begin{eqnarray*}max \{ t_{as}^- , t_{rw}^- , t_{eq}^- , t_{adr}^- \} +
+t_s[GAL] &\le& i^- T \\
+max \{ t_{as}^+ , t_{rw}^+ , t_{eq}^+ , t_{adr}^+ \} +
+t_s[GAL] &\le& i^+ T \\
+\end{eqnarray*}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmlinlinemathA{tex2html_wrap_inline535}%
+$T/2 \ge 20$%
+\lthtmlinlinemathZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{displaymath399}%
+\begin{displaymath}t_{regce}^- = T + 1.0 \quad ; \quad t_{regce}^+ = 2T + 7.0 \end{displaymath}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+{\newpage\clearpage
+\lthtmldisplayA{displaymath400}%
+\begin{displaymath}t_{regce}^+ < t_{ds}^- \Leftrightarrow 2T + 7 < 5/2 T + t_{clsn}^-
+\Leftrightarrow T/2 > 7 - t_{clsn}^- \end{displaymath}%
+\lthtmldisplayZ
+\hfill\lthtmlcheckvsize\clearpage}
+
+
+\end{document}

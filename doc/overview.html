@@ -1,0 +1,137 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.7 [en] (X11; U; SunOS 5.6 sun4m) [Netscape]">
+   <title>RoboCube
+</title>
+</head>
+<body >
+<img src="hdr.png" alt="RoboCube home">
+
+<table CELLSPACING=30 CELLPADDING=10 WIDTH="100%"  NOSAVE >
+<tr>
+<td ALIGN=CENTER COLSPAN="2"><H1>RoboCube</H1><br>
+The Robocube has been designed from 1997-2000 at the <A href="http://arti.vub.ac.be"> VUB AI Lab</A> by Dr. Thomas Walle <br>
+It is currently used by some research groups including the <A href="http://www.rids.de"> RIDS (Roboter in der Schule) project</a> and the <A href="http://robotics.iu-bremen.de"> IUB Robotics group</A><br>
+<A href="/cubeos/">Robocube's Operating System ''CubeOS'' can be found here </A><br> 
+</td>
+</tr>
+
+
+
+<tr>
+<td VALIGN=TOP>One main goal of the architecture is to allow the on-board
+implementation of as many robot behaviors as possible. Therefore, RoboCube
+provides quite some computation power and memory within the space-constraints.
+In addition, RoboCube is layed out to deal with various sensors and motors,
+radio-communication, and the option of high-resolution on-board vision.
+
+<td ALIGN=CENTER><img SRC="robocube.jpg" ></td>
+</tr>
+
+<tr>
+<td VALIGN=TOP>
+<h3>
+Main features</h3>
+
+<ul>
+<li>
+open bus architecture</li>
+
+<li>
+MC68332 CPU running at 16MHz</li>
+
+<li>
+256kB SRAM main memory</li>
+
+<li>
+128kB EPROM</li>
+
+<li>
+24 analog/digital (A/D) converter,</li>
+
+<li>
+6 digital/analog (D/A) converter,</li>
+
+<li>
+16 binary Input/Output (binI/O),</li>
+
+<li>
+5 binary Inputs,</li>
+
+<li>
+10 timer channels (TPC),</li>
+
+<li>
+3 DC-motor controller with pulse-accumulation (PAC), and</li>
+
+<li>
+an intelligent active InfraRed (aIR) subsystem.</li>
+</ul>
+An important aspect is that RoboCube's onboard software core supports an
+easy handling of these ports in combination with common sensors and motors.
+This means that it is possible to PlugAndPlay various components, which
+can be accessed in a high-level manner in software. RoboCube runs the <i>Process
+Description Language</i> (PDL) which combines C with special constructs
+facilitating behavioral control through networks of dynamical processes.
+For more information look to:
+<ol>
+<li>
+<a href="hardware.html">Hardware</a></li>
+
+<li>
+<a href="bios.html">BIOS</a></li>
+
+<li>
+<a href="connectors.html">Connectors</a></li>
+
+<li>
+<a href="assemble.html">Assembly
+of the stacking conncetors</a></li>
+
+<li>
+<a href="pdf.html">pdf sources of
+the used components</a></li>
+
+<li>
+<a href="schematics.html">Schematics</a></li>
+</ol>
+</td>
+
+<td VALIGN=TOP>
+<h3>
+RoboCube Version 2.0</h3>
+Currently, we are working on a new version of the RoboCube platform. New
+features include:&nbsp;
+<ul>
+<li>
+<a href="bdm/bdm-gal.html">BDM interface</a></li>
+
+<li>
+<a href="extbus/bustim.html">Embedding
+of DUART and I2C</a></li>
+
+<li>
+<!A HREF="fpdram/fpdram.html">DRAM and FPU extension</li>
+</ul>
+Whereas the BDM interface allows for a much better debugging, it also serves
+as a facility to program the now available Flash-EPROM from scratch. To
+do so, we developped a simple linux tool, called the BDM monitor to perform
+simple debugging tasks like e.g. reading processor status, reading and
+writing memory locations, downloading S-record files and last but not least
+programming and erasing our flash EPROMs. All source files are freely available
+<a href="bdmmon.tgz">here</a>.&nbsp;
+<p>The embedding of the DUART and the two I2C busmaster chips allows a
+much higher CPU frequency, i.e. 25MHz. Additionally, 16 direct memory mapped
+binary outputs could be inserted.&nbsp;
+<p>On top of that, an additional board was designed. It hosts a MC68882
+FPU chip running at 25MHz and implements 16MB of DRAM. Since the whole
+physical address space is 16MB, only 13MB are accessible.&nbsp;
+<p>Again, the pdf sources of the used components can be retrieved <a href="pdf2.html">here</a>
+and the schematics can be seen <a href="schematics2.html">here</a>.</td>
+</tr>
+</table>
+
+</body>
+</html>

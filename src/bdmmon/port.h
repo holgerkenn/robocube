@@ -1,0 +1,10 @@
+extern void bdm_init(int, int);
+extern void bdm_deinit(void);
+extern LONG bdm_clk(WORD, int);
+extern void bdm_delay(void);
+extern void ResetChip(void);
+extern int RestartChip(void);
+extern int StopChip(void);
+extern int StepChip(void);
+extern unsigned GetStatus(void);
+extern unsigned GetStatusMask(void);

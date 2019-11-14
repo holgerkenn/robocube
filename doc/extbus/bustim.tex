@@ -1,0 +1,606 @@
+\documentclass[12pt]{article}
+
+\textwidth=6in
+\textheight=9in
+\parindent=0in
+\parskip=1ex
+\voffset=-1in
+ 
+\input{epsf}
+ 
+\newcommand{\bi}{\begin{itemize}}
+\newcommand{\ei}{\end{itemize}}
+\newcommand{\bd}{\begin{description}}
+\newcommand{\ed}{\end{description}}
+\newcommand{\be}{\begin{enumerate}}
+\newcommand{\ee}{\end{enumerate}}
+
+\newcommand{\isc}{$I^2C$}
+\newcommand{\btab}[1]{\begin{table}\begin{center}\begin{tabular}{#1}}
+\newcommand{\etab}[2]{\end{tabular}\caption{\label{#1} #2}%
+                      \end{center}\end{table}}
+\newcommand{\myfig}[4]{%
+  \begin{figure}[htbp] \begin{center}%
+  \makebox{\epsfysize=#2 \epsfbox{#1}} \caption{\label{#3} #4}%
+  \end{center} \end{figure}}
+\newcommand{\beqn}{\begin{eqnarray*}}
+\newcommand{\eeqn}{\end{eqnarray*}}
+
+\title{Interface to \isc\ bus driver and DUART}
+\author{Thomas Walle}
+
+\begin{document}
+
+\maketitle
+
+The \isc\ bus driver and the DUART are mentioned to work with the MC68000 bus.
+Since the MC68332 has the same interface but is much faster, problems in the
+timing arise. In order to overcome these problems we embed the two
+components, i.e. we place a bidirectional driver into the data bus, which is
+controlled by a programmable logic device (GAL22V10). This device handles
+also the proper execution of the interupt acknowledge cycle.
+
+Fig. \ref{bus-embed} shows the construction of the embedding. In the lower
+right part are the two \isc bus controllers (PCF8584) and the DUART 
+(SCN68681). The GAL reads the bus control signals and controls the data bus
+driver (ABT652). In addition, it interfaces the data acknowledge signal
+to the CPU (/DACKO). In the upper part of the figure is a block for fast
+binary output depicted. With help of an address comparator (ALS518) the GAL
+decodes the write access to the register (ABT16823) and generates its clock.
+Eight of the outputs serve as direction control for two dual motor controls.
+The other eight outputs are unbound and can serve as fast binary outputs.
+
+\myfig{bus-embed.eps}{150mm}{bus-embed}{Overview of the embedding}
+
+In the first section, we describe the control equations of the GAL for both
+blocks. In section two, we deal with the embedding of the two kinds of 
+busmaster chips. Then, in the third section we show the details of the 
+implementation of the binary output block.
+
+\section{General control}
+
+The problem of the externel devices consists in the possibly very long
+disable time of the data acknowledge signal (DSACK) and the data bus for
+read accesses. Furthermore, the DUART has a very long hold time for the
+data in a write access.
+
+To overcome this, we insert a bidirectional driver with internal registers
+into the data bus. Each port of the driver is controlled by 3 signals:
+
+\bd
+\item[SRCSEL] selects from source the output is fed --- the internal
+  register for this direction or the other port
+\item[CLK] clocks data from the other port into the internal register
+\item[/OE] output enable for the port
+\ed
+
+The CPU side port is activated for read accesses by /RDOE. Basically, 
+it runs with the according chip select.
+
+A direct write after an read access to some external bus master would
+due to the large disable time conflict with the still driving master
+and cause bus contention. But luckily there has to be a fetch after
+the access and in the meantime the external bus has disabled its data
+bus interface. Even for fast loops, where there is no fetching, the
+next cycle is completely internal (update and test internal counter).
+
+In write cycles the chip select is enabled as early as the data strobe
+(/DS). Since the computation of the /WROE takes some time and the
+external bus controller expects valid data with the chip select going
+low, we enable the data bus driver with the write signal (/RW), that
+is valid after the first half clock cycle of the access. Consequently,
+in every write cycle the data bus driver is enabled. To ensure the
+large hold time specification of the DUART the /WROE signal is
+registered. Since the RW signal changes its state as early as in the
+first clock cycle of the next bus cycle, the data port is still active
+one clock cycle after the write access. To deliver valid data as long
+as possible, the port's source is switched to the internal register
+with the negated /AS signal. Thus, data is valid early in the
+beginning of the write cycle and gets invalid when the next read cycle
+starts.
+
+The data acknowledge signal is handled in the same way as the data bus is.
+Since it is unidirectional, the driver is implemented in the GAL.
+The computattion of the enable signal needs to cover several cases and
+thus, the logic equation contains some 'or'. But the GAL offers only
+one term. Consequently, a seperate output is used for its computation.
+
+A second issue is the interupt acknowledge cycle. It is basically a read
+cycle, but there is no chip select set. Hence, the cycle has to be decoded
+by the GAL. Such a cycle is recognized by the two low order function code
+bits (FC1, FC0) beeing 1 and address bit A0 beeing 1 as well. Address bits
+A1,\ldots ,A3 give the interupt level. This is sufficient because the lowest
+address bit distinguishes between other CPU space cycles. Due to lack
+of input pins A0 is not decoded. In selecting only unequal interupt
+levels, i.e. A1 is always 1 in this case, this distinguishes the
+interupt acknowledge cycles for these devices from other CPU cycles.
+
+Finally, the resulting equations for the GAL.
+
+\small
+\begin{verbatim}
+GAL22V10
+
+CK EQ RW /AS FC1 FC0 A3 A2 A1 /CS5 /CS2 GND
+/CS1 /DACKI DACKOE /IACK1 /IACK3 /IACK5 RDOE /WROE WRCK /REGCE /DACKO VCC
+
+
+RDOE = (/CS1 + /CS2 + /CS5)*RW + /IACK1 + /IACK3 + IACK5;
+
+/IACK1 = /AS*RW*FC1*FC0*/A3*/A2*A1;    //IRQ1 --> I2CB
+/IACK3 = /AS*RW*FC1*FC0*/A3*A2*A1;     //IRQ3 --> I2CA
+/IACK5 = /AS*RW*FC1*FC0*A3*/A2*A1;     //IRQ5 --> DUART
+
+/WROE := /RW;
+
+WRCK = (CS1 + CS2 + CS5)*/RW;
+
+DACKOE = /CS1 + /CS2 + /CS5 + /IACK1 + /IACK3 + /IACK5;
+/DACKO.OE = DACKOE;
+/DACKO = /DACKI;
+
+//----------------------------------------------------------
+
+/REGCE := /AS*/RW*/FC1*FC0*EQ*REGCE    //on with adr valid and /AS
+       +     /RW*/FC1*FC0*EQ*/REGCE;   //off with read or adr invalid
+\end{verbatim}
+\normalsize
+
+In the lower part of the definition of the GAL-equations the clock enable
+for the binary output is given. The register is clocked with the /DS signal.
+The clock is enabled after recognition of a valid address and an active
+address strobe (/AS). It is disabled again when the address gets invalid or
+the next read cycle starts. This is certainly before the next clock.
+
+The GAL registers are automatically reset after during power up. Thus, the
+write enable of the data bus driver and the clock enable of the binary
+output register are both invalid.
+
+
+\section{Timing of the accesses to the external busmasters}
+
+The accesses to external devices are mainly determined by two signals
+-- the chip select (/CS) and the data acknowledge (/DACK). An access
+runs basically in 3 steps:
+
+\be
+\item The CPU starts the access by preparing all necessary signals on
+  the bus and then pulling /CS low.
+\item The external device stores the data from the data bus or puts
+  valid data on the data bus and indicates that itself is ready now in
+  pulling /DACK low.
+\item The CPU finishes the access in disableing /CS again. It expects
+  the device to disable its /DACK and its data bus interface soon
+  thereafter.
+\ee
+
+Out of this observation, the analysis of the timing will be divided
+into 3 time points, too. At the first point, there are limitations due
+to the setup times to the activating edge of /CS, i.e. for the
+addresses, the RW signal and in case of a write also for the data.
+
+From the activating of /CS results a propagations delay for the
+activating edge of /DACK. This gives the basis for the calculation of
+the number of wait states. At the same time, there are setup and hold
+time limitations to a certain edge of the internal clock of the CPU in
+the case of read accesses.
+
+At the third point, the disableing of /CS, the device has to obey a
+disable time of /DACK and the data bus in case of a read. In case of a
+write, there are hold time limitations of the device for addresses,
+data and the RW signal.
+
+Before we verify all the limitating equations in detail, we first
+compute some basic time points, that a common to all cases.
+
+\begin{table}
+\begin{center}
+\scriptsize
+\begin{tabular}{|l|l||c|c||c|c||c|c|}
+\hline
+Symbol & \multicolumn{1}{c||}{Characteristic} & \multicolumn{2}{c||}{16.78MHz} &
+\multicolumn{2}{c||}{20.93MHz} & \multicolumn{2}{c|}{25.17MHz} \\
+&& min & max & min & max & min & max \\ \hline\hline
+$t_{chav}$ & clock high to address, FC valid & 0 & 29 & 0 & 23 & 0 &
+19 \\ \hline
+$t_{clsa}$ & clock low to /as, /ds, /cs asserted & 2 & 25 & 0 & 23 & 0
+& 19 \\\hline
+$t_{avsa}$ & address, FC valid to /as, /cs asserted & 15 & - & 10 & -&
+8 & - \\\hline
+$t_{clsn}$ & clock low to /as, /cs, /ds negated & 2 & 29 & 2 & 23 & 2
+& 19 \\\hline
+$t_{snai}$ & /as, /ds, /cs negated to address, FC invalid & 15 & - & 
+10 & - & 8 & - \\ \hline
+$t_{snrn}$ & /as, /ds, /cs negated to rw negated & 15 & - & 10 & -
+& 10 & - \\ \hline
+$t_{chrl}$ & clock high to rw low & 0 & 29 & 0 & 23 & 0 & 19 \\ \hline
+$t_{raaa}$ & rw asserted to /as, /cs asserted & 15 & - & 10 & - & 10 &
+- \\
+\hline
+$t_{rasa}$ & rw low to /ds, /cs asserted (write) & 70 & - & 54 & -
+& 40 & - \\ \hline
+$t_{chdo}$ & clock high to data out valid & - & 29 & - & 23 & - & 19 \\
+\hline
+$t_{sndoi}$ & /ds, /cs negated to data out invalid & 15 & - & 10 & -
+& 5 & - \\ \hline
+$t_{dvsa}$ & data out valid to /ds, /cs asserted (write) & 15 & - & 10
+& - & 8 & - \\ \hline
+$t_{dicl}$ & data in valid to clock low & 5 & - & 5 & - & 5 & - \\ \hline
+$t_{sndn}$ & /as, /ds negated to /dsack negated & 0 & 80 & 0 & 60 & 0
+& 50 \\
+\hline
+$t_{sndi}$ & /ds, /cs negated to data in invalid & 0 & - & 0 & - & 0 &
+- \\
+\hline
+$t_{shdi}$ & /ds, /cs negated to data in High-Z & - & 55 & - & 48 & -
+& 45 \\
+\hline
+$t_{aist}$ & asynchronous input setup (/dsack) & 5 & - & 5 & - & 5 & -
+\\
+\hline
+$t_{radc}$ & rw asserted to data bus impedance change & 40 & - & 32 &
+- & 25 & - \\ \hline
+\end{tabular}
+\caption{\label{proc-tim} Bus timing specification of the MC68332}
+\end{center}
+\end{table}
+
+Table \ref{proc-tim} gives a summary of all used timing information of
+the CPU. Since there are 3 types of CPU possible in the system, there
+are 3 columns with the respective figures.
+
+For the symbols in the equations, we introduce the following
+notation. The minimum propagation delay is always denoted with a minus
+sign, whereas the maximum with a plus sign. Where necessary the pair
+of input and output port meant is given in round brackets and the
+subscript 'pd' is used. Setup times (with the subscript 's') are
+always maxmimum times and hold times (with the subscript 'h') are
+always minimum times. Where necessary the input signal meant is given
+in round brackets. Disable times are handled like propagation
+delays. To avoid naming conflicts, the device name to which the time
+refers is given in square brackets.
+
+In starting an access to an external device the CPU prepares the bus,
+i.e. it drives address bus and RW signal in the first half of the
+first CPU cycle (S0).
+
+\beqn
+t_{adr} &=& t_{chav}\\
+t_{rw} &=& t_{chrl}\\
+\eeqn
+
+In the second half of the first CPU cycle (S1), valid addresses and a
+valid RW signal are indicated by activation of /AS.
+
+\[ t_{as} = T/2 + t_{clsa} \]
+
+For a read access the chip select follows the /AS signal ($t_{cs} :=
+t_{as}$), whereas it follows the /DS signal for write accesses ($t_{cs}
+:= t_{ds}$). The indication of valid data through activation of /DS
+happens in the second half of the second CPU cycle (S3).
+
+\[ t_{ds} = 3/2 T + t_{clsa} \]
+
+In this case the data bus is valid at latest at
+
+\[ t_{dat}^+ = t_{cs}^+ - t_{vdsa}^- = 3/2 T + t_{clsa}^+ - t_{vdsa}^- \]
+
+In order to keep the following investigation clear, we divide it
+further into the two cases read access and write access.
+
+\btab{|l|l|c|c|}
+\hline
+Symbol & \multicolumn{1}{c|}{Characteristic} & min & max \\
+\hline\hline
+\multicolumn{4}{c}{GAL22V10DQP} \\ \hline\hline
+$t_{pd}(i,o)$ & input valid to output valid & 1 & 10 \\ \hline
+$t_{pd}(ck,o)$ & clock to output valid & 1 & 7 \\ \hline
+$t_s$ & data setup to clock & - & 7 \\ \hline
+$t_h$ & data hold to clock & & - \\ \hline
+$t_{en}$ & input to output enabled & 1 & 10 \\ \hline
+$t_{dis}$ & input to output disabled & 1 & 9 \\ \hline\hline
+\multicolumn{4}{c}{ABT652} \\ \hline\hline
+$t_{pd}(i,o)$ & input valid to output valid & 1.5 & 6.7 \\ \hline
+$t_{pd}(sel,o)$ & select valid to output valid & 1.5 & 7.7 \\ \hline
+$t_{pd}(ck,o)$ & clock to output valid & 1.7 & 8.4 \\ \hline
+$t_s$ & data setup to clock & - &  \\ \hline
+$t_h$ & data hold to clock & & - \\ \hline
+$t_{en}$ & /oe to output enabled & 1.3 & 8.5 \\ \hline
+$t_{dis}$ & /oe to output disabled & 1.5 & 8.2 \\ \hline\hline
+\multicolumn{4}{c}{ALS518} \\ \hline\hline
+$t_{pd}(i,o)$ & input valid to output valid & 3 & 33 \\ \hline\hline
+\multicolumn{4}{c}{ABT16823} \\ \hline\hline
+$t_s(ck)$ & data setup to clock & - &  \\ \hline
+$t_h(ck)$ & data hold to clock & & - \\ \hline
+$t_s(en)$ & setup en to clock & - &  \\ \hline
+$t_h(en)$ & hold en to clock & & - \\ \hline
+\etab{logic-tim}{Timing specifications of the embedding logic}
+
+Table \ref{logic-tim} gives all necessary specifications of the
+embedding logic. Table \ref{dev-tim} summarizes all the timing
+limations that have to be verified for the single busmaster devices.
+
+\btab{|l|l||c|c||c|c||c|c|}
+\hline
+Symbol & \multicolumn{1}{c||}{Characteristic} & 
+\multicolumn{2}{c||}{PCD8584} &
+\multicolumn{2}{c||}{SCN68681} & \multicolumn{2}{c|}{XR68C192} \\
+&& min & max & min & max & min & max \\ \hline\hline
+$t_{avcl}$ & address valid to /cs low & 10 & - & 10 & - &&\\ \hline
+$t_{wlcl}$ & rw valid to /cs low & 10 & - & 0 & - &&\\ \hline
+$t_{dvcl}$ & data valid to /cs low & 0 & - & -261 & - &&\\ \hline
+$t_{chai}$ & /cs high to address invalid & 0 & - &&&&\\ \hline
+$t_{chwh}$ & /cs high to rw high & 0 & - & 0 & - &&\\ \hline
+$t_{chdi}$ & /cs high to data invalid &&&&&& \\ \hline
+$t_{cldl}$ & /cs low to /dtack low & - & 325 & - & 666 &&\\ \hline
+$t_{chdh}$ & /cs high to /dtack high &  & 120 &  & 100 &&\\ \hline
+$t_{cldv}$ & /cs low to data valid & & 180 & & 175 &&\\ \hline
+\etab{dev-tim}{Timing specifications of the busmaster devices}
+
+
+\subsection{Read accesses}
+
+Figure \ref{rd-dev-tim} illustrates the read access graphically.
+
+At the activating edge of /CS addresses and the RW signal have to be
+stable a certain time before.
+
+\beqn
+10 = t_{avcl} &<& t_{avsa} = (15,10,8)\\
+(10,0) = t_{wlcl} &<& t_{raaa} = (15,10,10)\\
+\eeqn
+
+A method to guarantee the setup time for the PCD8584 in th case of a
+25MHz CPU
+would delay the /CS artificially. Since this is a setup time and a
+worst case analysis, we can also state the following. In normal cases,
+i.e. proper power supply, decent ambient temperature, the worst case
+will never happen. If it happens the CPU speed will be reduced
+slightly.
+
+For the recognition and proper save of the data value, there are two
+times relevant: the time when the data bus is stable and the time when
+/DACK is stable on the external bus.
+
+The data bus driver ABT652 and the /DACKO output of the GAL are
+enabled with the /CS. Since it takes quite a while until the busmaster
+device generates a response, only the propagation delays of the
+interface logic is of interest. In a bus cycle without wait states,
+/DACK will be clocked at the beginning of S3 whereas the data bus will
+be latched at the beginning of S5. With $i$ the number of wait state
+cycles, the following has to be obeyed. For the data bus it is
+
+\beqn
+& & t_{dat}^+ + t_{dicl} < (5/2 + i) T\\
+&\Leftrightarrow& t_{cs}^+ + t_{cldv} + t_{pd}^+(i,o)[GAL] +
+t_{dicl} < (5/2 + i) T\\
+&\Leftrightarrow& T/2 + t_{clsa^+} + t_{cldv} + t_{pd}^+(i,o)[GAL] +
+t_{dicl} < (5/2 + i) T\\
+&\Leftrightarrow& (i+2) T > t_{clsa}^+ + t_{cldv} + 6.7 + t_{dicl}\\
+&\Leftrightarrow& (i+2)(60,50,40) - (25,23,19) > (191.7,188.7)\\
+&\Rightarrow& i = (2,3,4)\\
+\eeqn
+
+and for the /DACK signal it is
+
+\beqn
+& & t_{cs}^+ + t_{cldl} + t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& T/2 + t_{clsa}^+ + t_{cldl} + t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& (i+1) T > t_{clsa}^+ + t_{cldl} +  6.7 + t_{aist}\\
+&\Leftrightarrow& (i+1)(60,50,40) - (25,23,19) > (336.7,677.7)\\
+&\Rightarrow& i = ((6,7,8)(11,14,17))\\
+\eeqn
+
+\myfig{rd-dev-tim.eps}{100mm}{rd-dev-tim}{Timing of a read access}
+
+At the disableing edge of /CS there are 3 limitations. First, the data
+bus has to be stable until after the hold time of the CPU
+port. Second, the data bus and the /DACK signal must not be actively
+driven until after the disable time of the CPU (which is roughly the
+start of the next cycle).
+
+The data bus is hold until the data bus interface chip is disabled
+through the GAL.
+
+\[ 0 = t_{sndi} < t_{pd}^-(i,o)[GAL] + t_{dis}^-[abt652] = 1.0 + 1.3 = 2.3
+\]
+
+At latest the data bus is disabled after the maxmimum times in the
+equation above.
+
+\[ (55,48,45) t_{shdi} > t_{pd}^+(i,o)[GAL] + t_{dis}^+[abt652] = 
+10.0 + 8.5 = 18.5 \]
+
+With the same edge also the /DACK is disabled. The disable time of the
+output port of the GAL is enlarged by a small $\epsilon$ due to the
+pullup resistor.
+
+\[ (80,60,50) = t_{sndn}^+ > t_{dis}^+[GAL] + \epsilon = 9 + \epsilon \]
+
+
+\subsection{Write accesses}
+
+Figure \ref{rd-dev-tim} illustrates the read access graphically.
+
+Since the RW signal is registered in the GAL to function as WROE, it
+has to fulfill setup and hold times to the end of S1.
+
+\[ t_{rw}^+ + t_s[GAL] < T \]
+\[ \Rightarrow (60,50,40) = T > t_{chrl}^+ + 7.0 = (36,30,26) \]
+
+As the RW signal is valid during the whole cycle, the hold time is
+obviously obeyed.
+
+We determine now, when the inner data bus DB is at latest stable. The
+WROE is valid after the first CPU clock.
+
+\[ t_{wroe}^+ = T + t_pd(ck,o)[GAL] = T + 7.0 \]
+
+At the data bus interface chip there are now 3 concurrent paths,
+i.e. from the WROE enableing the output, from the WSEL switching to
+input port (instead of internal register) and the propagation from
+input to output port.
+
+\beqn
+t_{db}^+ = max \{ && t_{as}^+ + t_{pd}^+(s,o)[abt652],  \\
+&& t_{wroe}^+ + t_{pd}^+(oe,o)[abt652],\\
+&& t_{dat}^+ + t_{pd}^+(i,o)[abt652] \} \\
+\eeqn
+
+\myfig{wr-dev-tim.eps}{100mm}{wr-dev-tim}{Timing of a write access}
+
+With $T \ge 40$ the it follows that the last term determines the
+maximum. Thus,
+
+\[ t_{db}^+ = 3/2 T + t_{clsa} - t_{dvsa} + 6.7 \]
+
+Now, we are ready to investigate the setup times at the activating
+edge of /CS. For the addresses and the RW signal we get
+
+\beqn
+10 = t_{avcl} &<& t_{cs}^- - t_{adr}^+ = (63,52,41)\\
+(10,0)= t_{wlcl} &<& t_{rasa} = (70,54,40)\\
+\eeqn
+
+Since the time, when the inner data bus DB is at latest stable is
+determined by the propagation delay of the ABT652, this reduces the
+minimum time span between data bus stable and activation of the /CS.
+
+\[ (0,-261) = t_{dvcl} < t_{dvsa} - t_{pd}^+(i,o)[abt652] = 
+t_{dvsa} - 6.7 = (8.3,3.3,1.3) \]
+
+At the same time, the value of the data bus is stored in the internal
+register of the ABT652. Therefore,
+
+\[ t_s[abt652] < t_{dvsa} + t_{pd}^-(i,o)[GAL] \Leftrightarrow
+(15,10,8) = t_{dvsa} > ... - 1.0 \]
+
+The hold time is again obviously fulfilled.
+
+For the recognition of the activation of /DACK the same equation hold
+as in the case of a read access.
+
+At the end of the write access, addresses, the RW signal and data have
+to be held stable until after the hold time of the busmaster devices,
+i.e.
+
+\beqn
+(0,?) = t_{chai} &<& t_{snai} = (15,10,8)\\
+0 = t_{chwh} &<& t_{snrn} = (15,10,10)\\
+? = t_{chdi} &<& t_h(db)\\
+\eeqn
+
+With the disactivating edge of /CS the data bus interface is switched
+to its internal register. This allows to hold the internal data bus
+until the next CPU starts
+
+\beqn
+t_h(db) &=& min \{ t_{as}^- , t_{wroe}^- \}\\
+&=& \{ T/2 + t_{clsa}^- , T + t_{pd}^-(ck,o)[GAL] \}\\
+&=& T/2 + t_{clsa}^- = (32,25,20)\\
+\eeqn
+
+For the disableing of /DACK the same equation hold as in the case of a
+read access.
+
+
+\subsection{Interupt request cycles}
+
+An interupt request cycle is basically a read access to the device
+with the only difference, that the CPU uses no /CS and therefore the
+chip selects have to be decoded out of the address
+bus. Instead of a chip select the device looks for a signal with
+the same meaning on its /IACK port. Figure \ref{ir-dev-tim}
+illustrates the access.
+
+\myfig{ir-dev-tim.eps}{100mm}{ir-dev-tim}%
+      {Timing of a interupt acknowledge cycle}
+
+The differences in respect to the timing analysis only come only
+through a little later start of the access out of the view from the
+busmaster device. Because the /IACK has to
+be decoded out of the address bits, the activating edge of /IACK is a
+little later than an ordinary /CS would be. But this makes the setup
+conditions on that edge even more relexed and the hold time conditions
+have never been a problem. More precisely, we get
+
+\beqn
+10 = t_{avcl} &<& t_{avsa} + t_{pd}^-(i,o)[GAL] = (16,11,9)\\
+(10,0) = t_{wlcl} &<& t_{raaa} + t_{pd}^-(i,o)[GAL] = (16,11,11)\\
+\eeqn
+
+Consequently, the device will generate a later response to that
+starting edge, i.e.
+
+\beqn
+& & t_{cs}^+ + t_{cldl} + 2 \cdot t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& T/2 + t_{clsa}^+ + t_{cldl} + 2 \cdot t_{pd}^+(i,o)[GAL] +
+t_{aist} < (3/2 + i) T\\
+&\Leftrightarrow& (i+1) T > t_{clsa}^+ + t_{cldl} +  13.4 + t_{aist}\\
+&\Leftrightarrow& (i+1)(60,50,40) - (25,23,19) > (343.4,684.4)\\
+&\Rightarrow& i = ((6,7,8)(11,14,17))\\
+\eeqn
+
+The rest of the access is completely congruent to the read access.
+
+
+\section{Timing of the accesses to the binary output register}
+
+The access to the fast binary output register ABT16823 is a simple
+write access to a memory mapped device, i.e. the clock enable for the
+register is decoded directly from the address bus. The register is
+clock with the disableing edge of /DS. So, the setup time is
+determined by the difference of the earliest disableing of /DS and the
+latest time, when data is valid.
+
+\[ t_s[abt16823] < T - t_{chdo}^+ + T/2 + t_{clsn}^- \]
+
+The hold time is guarantied by the minimum data hold time of the CPU
+
+\[ t_h[abt16823] < t_{sndoi}^- \]
+
+The more critical observation is, whether the clock enable signal is
+valid in time and is disabled again before the next CPU cycle starts.
+
+In order to determine the timing of the clock enable, we distinguish
+two cases: the earliest CPU cycle $i^-$ and the latest CPU cycle $i^+$
+where the GAL might produce a valid clock enable. Thus,
+
+\beqn
+max \{ t_{as}^- , t_{rw}^- , t_{eq}^- , t_{adr}^- \} +
+t_s[GAL] &\le& i^- T \\
+max \{ t_{as}^+ , t_{rw}^+ , t_{eq}^+ , t_{adr}^+ \} +
+t_s[GAL] &\le& i^+ T \\
+\eeqn
+
+with $t_{eq}^- = t_{adr}^- + t_{pd}^-[als518]$ and $t_{eq}^+ =
+t_{adr}^+ + t_{pd}^+[als518]$. Since the minimum propagation delay of
+the ALS518 is very short the earliest cycle is clearly determined by
+the address strobe. Because $T/2 \ge 20$ and $t_{as}^-$ certainly less
+than $T/2 - 7.0$ it follows that
+
+\[ i^- = 1 \]
+
+A similar observation yields to the result
+
+\[ i^+ = 2 \]
+
+With these precalculations the timing of the clock enable is now fixed
+to
+
+\[ t_{regce}^- = T + 1.0 \quad ; \quad t_{regce}^+ = 2T + 7.0 \]
+
+In order to guarantee proper operation the latest clock enable has to
+be earlier than the earliest clock, which is /DS.
+
+\[ t_{regce}^+ < t_{ds}^- \Leftrightarrow 2T + 7 < 5/2 T + t_{clsn}^-
+\Leftrightarrow T/2 > 7 - t_{clsn}^- \]
+
+The same observation as for the enableing holds also for the
+disabling, i.e. the disableing is certainly before the next active
+edge of /DS.
+
+\end{document}

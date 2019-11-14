@@ -1,0 +1,97 @@
+<TITLE>Bios</TITLE>
+
+<HR>
+<CENTER>
+<A HREF="overview.html">Overview</A> | 
+<A HREF="hardware.html">Hardware</A> | 
+<B>BIOS</B> | 
+<A HREF="connectors.html">Connectors</A> | 
+<A HREF="assemble.html">Assembly</A>
+</CENTER>
+<HR>
+
+<H2>The RoboCube's Basic Input/Output Operating System (BIOS)</H2>
+
+RoboCube's BIOS has a quite special design
+to address the specific needs for robotic control.
+Besides the usual BIOS functionality like serial I/O for
+program download and debugging,
+it provides the following additional core functions:
+
+<UL>
+<LI> Access to sensors and actuators</LI>
+<LI> Wireless communication interface management</LI>
+</UL>
+
+To have a simplified and uniform access to the different actuators and
+sensors, the BIOS regularly reads the sensors, preprocesses the sensor data
+and stores the results in its RAM. The actual application program 
+has to perform only read
+operations on the main memory. Since the
+actual read/write operations to the hardware are triggered by a 
+timer interrupt every few milliseconds, sensors are read out in well-defined
+synchronized time
+intervals. This is especially important for reading out pulse
+accumulators to get well-defined results. The actuators are updated by this
+timer interrupt as well. Therefore, the application program can schedule
+sensor updates to be executed by the next timer interrupt.
+<P>
+
+The wireless communication interface provides reliable radio communication
+between several parties. Each party is identified by a unique number (ID).
+The data is transmitted in packets, which can be directed to only one other
+party (unicast), several other parties (multicast) or all other parties
+(broadcast). 
+Besides the payload data, these packets
+contain the ID of the source and the IDs of the destinations as well as
+packet sequence numbers and information for a cyclic redundancy check (CRC).
+<P>
+
+The radio communication protocol provides two communication channels, one for
+reliable stream communication and one for unreliable direct communication.
+The reliable stream communication channel provides automatic retransmission
+of lost packets and proper packet reordering on reception.
+Packets are CRC-checked upon reception and are discarded, if the CRC-check
+fails.
+Each packet in the reliable stream communication channel has to be
+acknowledged, non-acknowledged packets are assumed to be lost and will be 
+resent after a timeout. 
+<P>
+
+To prevent packet collisions, the protocol uses two strategies, 
+token passing and Carrier Sensed Multiple Access (CSMA).
+Each ID has its own time slot for transmission, and each party tries to
+identify its proper timeslot by listening to packets from other parties,
+identifying their IDs and synchronizing the protocol's time slots. Then the
+party waits for its own timeslot. But
+before transmission really starts, the presence of a carrier is checked. If no
+carrier is present, then the party starts to transmit. If, however, the
+transmission gets interrupted by another party, a CRC mismatch will occur and
+the packet is discarded upon reception. The receiving party will not
+acknowledge that packet and the packet will be resent.
+<P>
+
+If a packet-acknowledge is lost, the sender will send the well-received
+packet again, but the recipient will discard the packet because a packet with
+the same packet sequence number has already been received. 
+<P>
+
+The wireless communication interface has its own UART and interrupt service
+routine, therefore the communication is hidden from the application program,
+it only has to empty the receive queue from time to time. 
+<P>
+
+On the hardware side, the wireless communication interface is implemented with
+a Radiometrix Bim433-F UHF Transceiver directly connected to the UART. 
+This low power device can transmit half-duplex serial data with 40kBit/s over
+about 30m and provides on-board carrier detection and signal decoding circuits.
+
+<HR>
+<CENTER>
+<A HREF="overview.html">Overview</A> | 
+<A HREF="hardware.html">Hardware</A> | 
+<B>BIOS</B> | 
+<A HREF="connectors.html">Connectors</A> | 
+<A HREF="assemble.html">Assembly</A>
+</CENTER>
+<HR>

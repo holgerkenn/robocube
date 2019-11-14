@@ -1,0 +1,307 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!--Converted with LaTeX2HTML 98.1p1 release (March 2nd, 1998)
+originally by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>GAL implementation of the BDM interface</TITLE>
+<META NAME="description" CONTENT="GAL implementation of the BDM interface">
+<META NAME="keywords" CONTENT="bdm-gal">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<LINK REL="STYLESHEET" HREF="bdm-gal.css">
+<LINK REL="next" HREF="node1.html">
+</HEAD>
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html3"
+ HREF="node1.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif_gr.gif"> 
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif_gr.gif">   
+<BR>
+<B> Next:</B> <A NAME="tex2html4"
+ HREF="node1.html">About this document ...</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<P>
+<H1 ALIGN="CENTER">GAL implementation of the BDM interface</H1>
+<P ALIGN="CENTER"><STRONG>Thomas Walle</STRONG></P>
+<P ALIGN="LEFT"></P>
+
+<P>
+The BDM (<I>Background Debug Mode</I>) interface of the MC68332 is a
+very powerful method to allow for debugging on the fly as well as an
+efficient interface to download code.
+
+<P>
+Basically, it is a serial line that is driven from an external
+clock. To save pin count on the chip, all but one signals have
+different meanings in normal CPU mode. To avoid accidental entering of
+the BDM mode, the BDM interface has to be enabled during
+reset. Afterwards, the CPU enters BDM mode in the following 3 cases:
+
+<P>
+<UL>
+<LI>execution of Breakpoint operation
+<LI>double bus fault
+<LI>external signal  /<SMALL>BKPT</SMALL> active
+</UL>
+<P>
+The CPU signals entering of the BDM mode with  <SMALL>FREEZE</SMALL> going high.
+The serial interface will be activated. In this case,  /<SMALL>BKPT</SMALL>
+signal gets the function of the clock  <SMALL>DSCK</SMALL>,  /<SMALL>IFETCH</SMALL> gets
+serial data input  <SMALL>DSI</SMALL> and  /<SMALL>IPIPE</SMALL> gets serial data output
+ <SMALL>DSO</SMALL>.
+
+<P>
+The BDM interface is controlled via the parallel port of a PC. Its
+control signals allow a fast and simple method to control the
+interface.
+
+<P>
+<BR>
+<DIV ALIGN="CENTER"><A NAME="gal.fig">&#160;</A><A NAME="111">&#160;</A>
+<TABLE WIDTH="50%">
+<CAPTION><STRONG>Figure:</STRONG>
+Structure of the interface</CAPTION>
+<TR><TD><IMG
+ WIDTH="671" HEIGHT="313"
+ SRC="img2.gif"
+ ALT="\begin{figure}\begin{center}\makebox{\epsfysize=70mm \epsfbox{gal.eps}} \end{center} \end{figure}"></TD></TR>
+</TABLE>
+</DIV>
+<BR>
+<P>
+The interface, as it is shown in fig. <A HREF="bdm-gal.html#gal.fig"><IMG  ALIGN="BOTTOM" BORDER="1" ALT="[*]"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/cross_ref_motif.gif"></A>, implements the
+public domain BDM interface. It supports 3 basic functions:
+
+<P>
+<DL COMPACT>
+<DT>1.
+<DD>Performing a reset and enabling the BDM interface. Depending on
+the  <SMALL>DSCK</SMALL> signal the CPU stops immediately before the first fetch or it
+  runs through and boots as usual.
+<DT>2.
+<DD>Activation of the BDM mode. Thus, commands can be sent to read
+  or set memory locations, registers, CPU state, ...
+<DT>3.
+<DD>Single stepping the CPU. After sending a GO command in BDM mode
+  the CPU will resume normal execution. The corresponding pins get their
+  normal function back.  /<SMALL>IFETCH</SMALL> ( <SMALL>DSI</SMALL>) indicates the first
+  fetch after resuming normal mode. Hence, if  <SMALL>STEP</SMALL> is activated,
+  this causes once again activation of  /<SMALL>BKPT</SMALL>.  
+</DL>
+<P>
+The following equations describe the implementation of the interface
+via a GAL.
+
+<P><PRE>
+MODULE bdm
+
+/* Pinout */
+            -------
+       CK  | 1   24|  VCC
+      RES  | 2   23|  CKO
+    /DSCK  | 3   22|  FR-OUT
+  /DSI-IN  | 4   21|  DSO-OUT
+    /STEP  | 5   20|  LED0
+           | 6   19|  LED1
+           | 7   18|  LED2
+    LEDEN  | 8   17|  LED3
+           | 9   16|
+    FR-IN  |10   15|  /BKPT
+   DSO-IN  |11   14|  DSI-OUT
+      GND  |12   13|
+            -------
+
+
+
+
+/* Equations */
+
+BKPT = RES + /DSCK + Q;
+
+Q := 1;
+Q.AR = /STEP;
+CKO = /DSI-OUT + FR-IN;
+
+DSI-OUT = DSI-IN;
+DSI-OUT.OE = FR-IN;
+DSO-OUT = /(DSO-IN * FR-IN);
+
+FR-OUT = FR-IN;
+
+LED0 = FR-IN;
+LED1 = BKPT;
+LED2 = RES;
+LED3 = STEP;
+LED0.OE = LEDEN;
+LED1.OE = LEDEN;
+LED2.OE = LEDEN;
+LED3.OE = LEDEN;
+</PRE>
+<P>
+The first function is simply implemented by connecting  /<SMALL>RES</SMALL> to the
+equation for  /<SMALL>BKPT</SMALL>.
+
+<P>
+To stop the normal execution of the CPU and enter BDM mode the
+ <SMALL>DSCK</SMALL> line is held low until the CPU stops which is indicated by
+ <SMALL>FR-IN</SMALL> going high. In this case.  /<SMALL>IFETCH</SMALL> output becomes now
+the serial data input  <SMALL>DSI</SMALL>, thus the output driver of  <SMALL>DSI-OUT</SMALL>
+is enabled. The communication is fully bidirectional. Data lines are
+changed with a low to high transition of  <SMALL>DSCK</SMALL> and have to be
+latched with the high to low transition. At the same time a new
+command is sent via the  <SMALL>DSI</SMALL> line, the possible values of a
+previous command are sent via  <SMALL>DSO</SMALL>. The CPU returns from BDM mode
+after transmission of a GO command.
+
+<P>
+For the single stepping function it is important to notice that the GO
+command ends with a 0, i.e. the last bit sent causes  <SMALL>DSI</SMALL> line to be
+low. After resuming normal mode (indicated by  <SMALL>FR-IN</SMALL> going low) the
+ /<SMALL>IFETCH</SMALL> function is turned on again. Hence, for a short while this
+line is floating before it is driven high (inactive) again. With a
+high to low transition of  /<SMALL>IFETCH</SMALL> the CPU indicates a fetch bus
+cycle. In order to stop the CPU after this command again, this is the
+minimum period to wait for a new activation of  /<SMALL>BKPT</SMALL>. To avoid
+unintentional activation of  /<SMALL>BKPT</SMALL> during the floating period of
+ /<SMALL>IFETCH</SMALL> the line is held low by a pull down resistor. To catch the
+negative edge of  /<SMALL>IFETCH</SMALL> we use the negated signal as clock for
+register Q. If clocking is enabled through releasing of reset,
+i.e.  <SMALL>STEP</SMALL> going high, a 1 is clocked into Q causing activation of
+ /<SMALL>BKPT</SMALL> again. In order to have no interference with other functions as
+well as the normal execution mode of the CPU the  <SMALL>STEP</SMALL> signal has to be
+low in every other case.
+
+<P>
+The physical implementation of the interface is very simple by the use
+of a GAL. Nevertheless, there is a problem which is caused by a
+usually too weak output driver of the parallel port. To have a
+convenient BDM interface the cable to the CPU can reach up to a length
+of 2m. The fast response in case of the single stepping functionality
+makes it desirable to have the GAL close to the CPU. Thus, a weak port
+output driver has a tremendous rise time in its signals which causes
+oscillating output signals of the GAL and hence destroys the whole
+transmission. To overcome this, a Schmitt trigger inverter was
+inserted for all signals going from the line printer output port to
+the GAL (cf. <A HREF="bdm-gal.html#gal.fig"><IMG  ALIGN="BOTTOM" BORDER="1" ALT="[*]"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/cross_ref_motif.gif"></A>). Since this inverter is available in
+surface mount technology, it can be hidden in the plug for the
+parallel port.
+
+<P>
+<BR>
+<DIV ALIGN="CENTER"><A NAME="123">&#160;</A>
+<TABLE>
+<CAPTION><STRONG>Table:</STRONG>
+ Signals of the line printer port (LPT)</CAPTION>
+<TR><TD>
+<DIV ALIGN="CENTER">
+<TABLE CELLPADDING=3 BORDER="1" ALIGN="CENTER">
+<TR><TD ALIGN="CENTER">&nbsp;</TD>
+<TD ALIGN="CENTER" COLSPAN=4>Port bytes</TD>
+</TR>
+<TR><TD ALIGN="CENTER">Bit</TD>
+<TD ALIGN="CENTER">+0</TD>
+<TD ALIGN="CENTER">+1</TD>
+<TD ALIGN="CENTER">+2</TD>
+<TD ALIGN="CENTER">+3</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x01</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">/strobe</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x02</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">/afeed</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x04</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">/init</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x08</TD>
+<TD ALIGN="CENTER">not</TD>
+<TD ALIGN="CENTER">/error</TD>
+<TD ALIGN="CENTER">/selin</TD>
+<TD ALIGN="CENTER">not</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x10</TD>
+<TD ALIGN="CENTER">used</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">used</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x20</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+<TD ALIGN="CENTER">pend</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x40</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+<TD ALIGN="CENTER">/ack</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+</TR>
+<TR><TD ALIGN="CENTER">0x80</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+<TD ALIGN="CENTER">/busy</TD>
+<TD ALIGN="CENTER">-</TD>
+<TD ALIGN="CENTER">&nbsp;</TD>
+</TR>
+</TABLE></DIV></TD></TR>
+</TABLE>
+</DIV>
+<BR>
+<P>
+Finally, table <A HREF="#lptport"><IMG  ALIGN="BOTTOM" BORDER="1" ALT="[*]"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/cross_ref_motif.gif"></A> gives an overview of the logical
+interface of the parallel port indicating the bit positions of all
+used signals.
+
+<P>
+<BR><HR>
+<!--Table of Child-Links-->
+<A NAME="CHILD_LINKS">&#160;</A>
+<UL>
+<LI><A NAME="tex2html5"
+ HREF="node1.html">About this document ... </A>
+</UL>
+<!--End of Table of Child-Links-->
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html3"
+ HREF="node1.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif_gr.gif"> 
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif_gr.gif">   
+<BR>
+<B> Next:</B> <A NAME="tex2html4"
+ HREF="node1.html">About this document ...</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+<I>Thomas Walle</I>
+<BR><I>1999-05-17</I>
+</ADDRESS>
+</BODY>
+</HTML>

@@ -1,0 +1,303 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="description" CONTENT="GAL implementation of the BDM interface">
+   <META NAME="keywords" CONTENT="bdm-gal">
+   <META NAME="resource-type" CONTENT="document">
+   <META NAME="distribution" CONTENT="global">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.08 [en] (X11; I; SunOS 5.6 sun4u) [Netscape]">
+   <TITLE>GAL implementation of the BDM interface</TITLE>
+<!--Converted with LaTeX2HTML 98.1p1 release (March 2nd, 1998)
+originally by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<LINK REL="STYLESHEET" HREF="bdm-gal.css">
+<LINK REL="next" HREF="node1.html">
+</HEAD>
+<BODY>
+The BDM (<I>Background Debug Mode</I>)
+interface of the MC68332 is a very powerful method to allow for debugging
+on the fly as well as an efficient interface to download code.
+<P>Basically, it is a serial line that is driven from an external clock.
+To save pin count on the chip, all but one signals have different meanings
+in normal CPU mode. To avoid accidental entering of the BDM mode, the BDM
+interface has to be enabled during reset. Afterwards, the CPU enters BDM
+mode in the following 3 cases:
+<UL>
+<LI>
+execution of Breakpoint operation</LI>
+
+<LI>
+double bus fault</LI>
+
+<LI>
+external signal /<FONT SIZE=-1>BKPT</FONT> active</LI>
+</UL>
+The CPU signals entering of the BDM mode with <FONT SIZE=-1>FREEZE</FONT>
+going high. The serial interface will be activated. In this case, /<FONT SIZE=-1>BKPT</FONT>
+signal gets the function of the clock <FONT SIZE=-1>DSCK</FONT>, /<FONT SIZE=-1>IFETCH</FONT>
+gets serial data input <FONT SIZE=-1>DSI</FONT> and /<FONT SIZE=-1>IPIPE</FONT>
+gets serial data output <FONT SIZE=-1>DSO</FONT>.
+<P>The BDM interface is controlled via the parallel port of a PC. Its control
+signals allow a fast and simple method to control the interface.&nbsp;
+<BR>&nbsp;
+<CENTER><TABLE WIDTH="50%" >
+<CAPTION>&nbsp;</CAPTION>
+
+<TR>
+<TD><IMG SRC="img2.gif" ALT="\begin{figure}\begin{center}\makebox{\epsfysize=70mm \epsfbox{gal.eps}} \end{center} \end{figure}" HEIGHT=313 WIDTH=671></TD>
+</TR>
+</TABLE></CENTER>
+
+<CENTER><B>Figure:</B> Structure of the interface</CENTER>
+
+<P><BR>
+<P>The interface, as it is shown in the figure above, implements the public
+domain BDM interface. It supports 3 basic functions:
+<DL COMPACT>
+<DT>
+1.</DT>
+
+<DD>
+Performing a reset and enabling the BDM interface. Depending on the <FONT SIZE=-1>DSCK</FONT>
+signal the CPU stops immediately before the first fetch or it runs through
+and boots as usual.</DD>
+
+<DT>
+2.</DT>
+
+<DD>
+Activation of the BDM mode. Thus, commands can be sent to read or set memory
+locations, registers, CPU state, ...</DD>
+
+<DT>
+3.</DT>
+
+<DD>
+Single stepping the CPU. After sending a GO command in BDM mode the CPU
+will resume normal execution. The corresponding pins get their normal function
+back. /<FONT SIZE=-1>IFETCH</FONT> ( <FONT SIZE=-1>DSI</FONT>) indicates
+the first fetch after resuming normal mode. Hence, if <FONT SIZE=-1>STEP</FONT>
+is activated, this causes once again activation of /<FONT SIZE=-1>BKPT</FONT>.</DD>
+</DL>
+The following equations describe the implementation of the interface via
+a GAL.
+<PRE>MODULE bdm
+
+/* Pinout */
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -------
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CK&nbsp; | 1&nbsp;&nbsp; 24|&nbsp; VCC
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; RES&nbsp; | 2&nbsp;&nbsp; 23|&nbsp; CKO
+&nbsp;&nbsp;&nbsp; /DSCK&nbsp; | 3&nbsp;&nbsp; 22|&nbsp; FR-OUT
+&nbsp; /DSI-IN&nbsp; | 4&nbsp;&nbsp; 21|&nbsp; DSO-OUT
+&nbsp;&nbsp;&nbsp; /STEP&nbsp; | 5&nbsp;&nbsp; 20|&nbsp; LED0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | 6&nbsp;&nbsp; 19|&nbsp; LED1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | 7&nbsp;&nbsp; 18|&nbsp; LED2
+&nbsp;&nbsp;&nbsp; LEDEN&nbsp; | 8&nbsp;&nbsp; 17|&nbsp; LED3
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | 9&nbsp;&nbsp; 16|
+&nbsp;&nbsp;&nbsp; FR-IN&nbsp; |10&nbsp;&nbsp; 15|&nbsp; /BKPT
+&nbsp;&nbsp; DSO-IN&nbsp; |11&nbsp;&nbsp; 14|&nbsp; DSI-OUT
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; GND&nbsp; |12&nbsp;&nbsp; 13|
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -------
+
+/* Equations */
+BKPT = RES + /DSCK + Q;
+
+Q := 1;
+Q.AR = /STEP;
+CKO = /DSI-OUT + FR-IN;
+
+DSI-OUT = DSI-IN;
+DSI-OUT.OE = FR-IN;
+DSO-OUT = /(DSO-IN * FR-IN);
+
+FR-OUT = FR-IN;
+
+LED0 = FR-IN;
+LED1 = BKPT;
+LED2 = RES;
+LED3 = STEP;
+LED0.OE = LEDEN;
+LED1.OE = LEDEN;
+LED2.OE = LEDEN;
+LED3.OE = LEDEN;</PRE>
+
+<P><BR>The first function is simply implemented by connecting /<FONT SIZE=-1>RES</FONT>
+to the equation for /<FONT SIZE=-1>BKPT</FONT>.
+<P>To stop the normal execution of the CPU and enter BDM mode the <FONT SIZE=-1>DSCK</FONT>
+line is held low until the CPU stops which is indicated by <FONT SIZE=-1>FR-IN</FONT>
+going high. In this case. /<FONT SIZE=-1>IFETCH</FONT> output becomes now
+the serial data input <FONT SIZE=-1>DSI</FONT>, thus the output driver
+of <FONT SIZE=-1>DSI-OUT</FONT> is enabled. The communication is fully
+bidirectional. Data lines are changed with a low to high transition of
+<FONT SIZE=-1>DSCK</FONT> and have to be latched with the high to low transition.
+At the same time a new command is sent via the <FONT SIZE=-1>DSI</FONT>
+line, the possible values of a previous command are sent via <FONT SIZE=-1>DSO</FONT>.
+The CPU returns from BDM mode after transmission of a GO command.
+<P>For the single stepping function it is important to notice that the
+GO command ends with a 0, i.e. the last bit sent causes <FONT SIZE=-1>DSI</FONT>
+line to be low. After resuming normal mode (indicated by <FONT SIZE=-1>FR-IN</FONT>
+going low) the /<FONT SIZE=-1>IFETCH</FONT> function is turned on again.
+Hence, for a short while this line is floating before it is driven high
+(inactive) again. With a high to low transition of /<FONT SIZE=-1>IFETCH</FONT>
+the CPU indicates a fetch bus cycle. In order to stop the CPU after this
+command again, this is the minimum period to wait for a new activation
+of /<FONT SIZE=-1>BKPT</FONT>. To avoid unintentional activation of /<FONT SIZE=-1>BKPT</FONT>
+during the floating period of /<FONT SIZE=-1>IFETCH</FONT> the line is
+held low by a pull down resistor. To catch the negative edge of /<FONT SIZE=-1>IFETCH</FONT>
+we use the negated signal as clock for register Q. If clocking is enabled
+through releasing of reset, i.e. <FONT SIZE=-1>STEP</FONT> going high,
+a 1 is clocked into Q causing activation of /<FONT SIZE=-1>BKPT</FONT>
+again. In order to have no interference with other functions as well as
+the normal execution mode of the CPU the <FONT SIZE=-1>STEP</FONT> signal
+has to be low in every other case.
+<P>The physical implementation of the interface is very simple by the use
+of a GAL. Nevertheless, there is a problem which is caused by a usually
+too weak output driver of the parallel port. To have a convenient BDM interface
+the cable to the CPU can reach up to a length of 2m. The fast response
+in case of the single stepping functionality makes it desirable to have
+the GAL close to the CPU. Thus, a weak port output driver has a tremendous
+rise time in its signals which causes oscillating output signals of the
+GAL and hence destroys the whole transmission. To overcome this, a Schmitt
+trigger inverter was inserted for all signals going from the line printer
+output port to the GAL. Since this inverter is available in surface mount
+technology, it can be hidden in the plug for the parallel port.&nbsp;
+<CENTER><TABLE>
+<CAPTION>&nbsp;</CAPTION>
+
+<TR>
+<TD>&nbsp;
+<CENTER><TABLE BORDER CELLPADDING=3 >
+<TR>
+<TD ALIGN=CENTER>&nbsp;</TD>
+
+<TD ALIGN=CENTER COLSPAN="4">Port bytes</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>Bit</TD>
+
+<TD ALIGN=CENTER>+0</TD>
+
+<TD ALIGN=CENTER>+1</TD>
+
+<TD ALIGN=CENTER>+2</TD>
+
+<TD ALIGN=CENTER>+3</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x01</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>/strobe</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x02</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>/afeed</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x04</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>/init</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x08</TD>
+
+<TD ALIGN=CENTER>not</TD>
+
+<TD ALIGN=CENTER>/error</TD>
+
+<TD ALIGN=CENTER>/selin</TD>
+
+<TD ALIGN=CENTER>not</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x10</TD>
+
+<TD ALIGN=CENTER>used</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>used</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x20</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+
+<TD ALIGN=CENTER>pend</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x40</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+
+<TD ALIGN=CENTER>/ack</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+</TR>
+
+<TR>
+<TD ALIGN=CENTER>0x80</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+
+<TD ALIGN=CENTER>/busy</TD>
+
+<TD ALIGN=CENTER>-</TD>
+
+<TD ALIGN=CENTER>&nbsp;</TD>
+</TR>
+</TABLE></CENTER>
+</TD>
+</TR>
+</TABLE></CENTER>
+
+<CENTER><B>Table:</B> Signals of the line printer port (LPT)</CENTER>
+
+<P>Finally, the table above gives an overview of the logical interface
+of the parallel port indicating the bit positions of all used signals.
+<BR>&nbsp;
+<P>
+<HR WIDTH="100%">
+<ADDRESS>
+<I>Thomas Walle</I></ADDRESS>
+
+<BR><I>1999-05-17</I>
+</BODY>
+</HTML>

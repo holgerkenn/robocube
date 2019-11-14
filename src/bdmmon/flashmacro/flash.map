@@ -1,0 +1,85 @@
+
+Allocating common symbols
+Common symbol       size              file
+
+p                   0x4               flash.o
+__errno             0x2               sys_var.o
+ptr                 0x4               e_handle.o
+tmp2                0x2               flash.o
+addr                0x4               flash.o
+size                0x4               flash.o
+ok                  0x2               flash.o
+tmp1                0x2               flash.o
+
+Memory Configuration
+
+Name             Origin             Length            
+rom              0x00f00000         0x00020000
+cpuram           0x00f20000         0x00000800
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD crt0.o
+LOAD e_handle.o
+LOAD sys_var.o
+LOAD flash.o
+START GROUP
+LOAD /usr/local/lib/gcc-lib/m68k-coff/2.8.1/m68000/msoft-float/libgcc.a
+END GROUP
+                0x00000000                PROVIDE (__DYNAMIC, 0x0)
+                0x00f207fc                PROVIDE (__stack, 0xf207fc)
+
+.text           0x00f20000      0x774
+ *(.text)
+ .text          0x00f20000      0x282 crt0.o
+ *fill*         0x00f20282        0x2
+ .text          0x00f20284      0x180 e_handle.o
+                0x00f20316                exp_handler
+ .text          0x00f20404      0x370 flash.o
+                0x00f2045e                flash_write
+                0x00f20774                .=ALIGN(0x4)
+
+.data           0x00f20774       0x6c
+                0x00f20774                __data_start=.
+ *(.shdata)
+ *(.data)
+ .data          0x00f20774       0x58 e_handle.o
+                0x00f207c4                intro
+                0x00f207c8                halt
+                0x00f20774                e_name
+ .data          0x00f207cc       0x14 flash.o
+                0x00f207dc                fail
+                0x00f207d8                finish
+                0x00f207d4                verify
+                0x00f207cc                erasing
+                0x00f207d0                writing
+                0x00f207e0                _edata=.
+
+.bss            0x00f207e0       0x1c
+                0x00f207e0                .=ALIGN(0x4)
+                0x00f207e0                __bss_start=.
+ *(.shbss)
+ *(.bss)
+ *(COMMON)
+ COMMON         0x00f207e0        0x4 e_handle.o
+                0x00f207e0                ptr
+ COMMON         0x00f207e4        0x2 sys_var.o
+                0x00f207e4                __errno
+ *fill*         0x00f207e6        0x2
+ COMMON         0x00f207e8       0x14 flash.o
+                0x00f207e8                p
+                0x00f207ec                tmp2
+                0x00f207f0                addr
+                0x00f207f4                size
+                0x00f207f8                ok
+                0x00f207fa                tmp1
+                0x00f20800                _end=ALIGN(0x8)
+                0x00f20800                __end=_end
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+OUTPUT(flash.coff coff-m68k)

@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!--Converted with LaTeX2HTML 98.1p1 release (March 2nd, 1998)
+originally by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>Interface to I2C bus driver and DUART</TITLE>
+<META NAME="description" CONTENT="Interface to I2C bus driver and DUART">
+<META NAME="keywords" CONTENT="bustim">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<LINK REL="STYLESHEET" HREF="bustim.css">
+<LINK REL="next" HREF="node1.html">
+</HEAD>
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html8"
+ HREF="node1.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif_gr.gif"> 
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif_gr.gif">   
+<BR>
+<B> Next:</B> <A NAME="tex2html9"
+ HREF="node1.html">General control</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<P>
+<H1 ALIGN="CENTER">Interface to <I>I</I><SUP>2</SUP><I>C</I> bus driver and DUART</H1>
+<P ALIGN="CENTER"><STRONG>Thomas Walle</STRONG></P>
+<P ALIGN="LEFT"></P>
+
+<P>
+The <I>I</I><SUP>2</SUP><I>C</I> bus driver and the DUART are mentioned to work with the MC68000 bus.
+Since the MC68332 has the same interface but is much faster, problems in the
+timing arise. In order to overcome these problems we embed the two
+components, i.e. we place a bidirectional driver into the data bus, which is
+controlled by a programmable logic device (GAL22V10). This device handles
+also the proper execution of the interupt acknowledge cycle.
+
+<P>
+Fig. <A HREF="bustim.html#bus-embed"><IMG  ALIGN="BOTTOM" BORDER="1" ALT="[*]"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/cross_ref_motif.gif"></A> shows the construction of the embedding. In the lower
+right part are the two <I>I</I><SUP>2</SUP><I>C</I>bus controllers (PCF8584) and the DUART 
+(SCN68681). The GAL reads the bus control signals and controls the data bus
+driver (ABT652). In addition, it interfaces the data acknowledge signal
+to the CPU (/DACKO). In the upper part of the figure is a block for fast
+binary output depicted. With help of an address comparator (ALS518) the GAL
+decodes the write access to the register (ABT16823) and generates its clock.
+Eight of the outputs serve as direction control for two dual motor controls.
+The other eight outputs are unbound and can serve as fast binary outputs.
+
+<P>
+<BR>
+<DIV ALIGN="CENTER"><A NAME="bus-embed">&#160;</A><A NAME="310">&#160;</A>
+<TABLE WIDTH="50%">
+<CAPTION><STRONG>Figure:</STRONG>
+Overview of the embedding</CAPTION>
+<TR><TD><IMG
+ WIDTH="633" HEIGHT="678"
+ SRC="img1.gif"
+ ALT="\begin{figure}\begin{center}\makebox{\epsfysize=150mm \epsfbox{bus-embed.eps}} \end{center} \end{figure}"></TD></TR>
+</TABLE>
+</DIV>
+<BR>
+<P>
+In the first section, we describe the control equations of the GAL for both
+blocks. In section two, we deal with the embedding of the two kinds of 
+busmaster chips. Then, in the third section we show the details of the 
+implementation of the binary output block.
+
+<P>
+<BR><HR>
+<!--Table of Child-Links-->
+<A NAME="CHILD_LINKS">&#160;</A>
+<UL>
+<LI><A NAME="tex2html10"
+ HREF="node1.html">General control</A>
+<LI><A NAME="tex2html11"
+ HREF="node2.html">Timing of the accesses to the external busmasters</A>
+<UL>
+<LI><A NAME="tex2html12"
+ HREF="node3.html">Read accesses</A>
+<LI><A NAME="tex2html13"
+ HREF="node4.html">Write accesses</A>
+<LI><A NAME="tex2html14"
+ HREF="node5.html">Interupt request cycles</A>
+</UL>
+<LI><A NAME="tex2html15"
+ HREF="node6.html">Timing of the accesses to the binary output register</A>
+<LI><A NAME="tex2html16"
+ HREF="node7.html">About this document ... </A>
+</UL>
+<!--End of Table of Child-Links-->
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html8"
+ HREF="node1.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif_gr.gif"> 
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif_gr.gif">   
+<BR>
+<B> Next:</B> <A NAME="tex2html9"
+ HREF="node1.html">General control</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+<I>Thomas Walle</I>
+<BR><I>1999-05-18</I>
+</ADDRESS>
+</BODY>
+</HTML>

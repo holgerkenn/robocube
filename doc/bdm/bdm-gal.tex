@@ -1,0 +1,192 @@
+\documentclass[12pt]{article}
+
+\textwidth=6in
+\textheight=9in
+\parindent=0in
+\parskip=1ex
+\voffset=-1in
+ 
+\input{epsf}
+ 
+\newcommand{\bi}{\begin{itemize}}
+\newcommand{\ei}{\end{itemize}}
+\newcommand{\bd}{\begin{description}}
+\newcommand{\ed}{\end{description}}
+\newcommand{\be}{\begin{enumerate}}
+\newcommand{\ee}{\end{enumerate}}
+
+\newcommand{\btab}[1]{\begin{table}[htbp]\begin{center}\begin{tabular}{#1}}
+\newcommand{\etab}[2]{\end{tabular}\caption{\label{#1} #2}%
+                      \end{center}\end{table}}
+\newcommand{\myfig}[4]{%
+  \begin{figure}[htbp] \begin{center}%
+  \makebox{\epsfysize=#2 \epsfbox{#1}} \caption{\label{#3} #4}%
+  \end{center} \end{figure}}
+
+\title{GAL implementation of the BDM interface}
+\author{Thomas Walle}
+
+
+\begin{document}
+
+\maketitle
+
+The BDM ({\it Background Debug Mode}) interface of the MC68332 is a
+very powerful method to allow for debugging on the fly as well as an
+efficient interface to download code.
+
+Basically, it is a serial line that is driven from an external
+clock. To save pin count on the chip, all but one signals have
+different meanings in normal CPU mode. To avoid accidental entering of
+the BDM mode, the BDM interface has to be enabled during
+reset. Afterwards, the CPU enters BDM mode in the following 3 cases:
+
+\bi
+\item execution of Breakpoint operation
+\item double bus fault
+\item external signal {\sc /bkpt} active
+\ei
+
+The CPU signals entering of the BDM mode with {\sc freeze} going high.
+The serial interface will be activated. In this case, {\sc /bkpt}
+signal gets the function of the clock {\sc dsck}, {\sc /ifetch} gets
+serial data input {\sc dsi} and {\sc /ipipe} gets serial data output
+{\sc dso}.
+
+The BDM interface is controlled via the parallel port of a PC. Its
+control signals allow a fast and simple method to control the
+interface.
+
+\myfig{gal.eps}{70mm}{gal.fig}{Structure of the interface}
+
+The interface, as it is shown in fig. \ref{gal.fig}, implements the
+public domain BDM interface. It supports 3 basic functions:
+
+\be
+\item Performing a reset and enabling the BDM interface. Depending on
+  the {\sc dsck} signal the CPU stops immediately before the first fetch or it
+  runs through and boots as usual.
+\item Activation of the BDM mode. Thus, commands can be sent to read
+  or set memory locations, registers, CPU state, ...
+\item Single stepping the CPU. After sending a GO command in BDM mode
+  the CPU will resume normal execution. The corresponding pins get their
+  normal function back. {\sc /ifetch} ({\sc dsi}) indicates the first
+  fetch after resuming normal mode. Hence, if {\sc step} is activated,
+  this causes once again activation of {\sc /bkpt}.  
+\ee
+
+The following equations describe the implementation of the interface
+via a GAL.
+
+\small
+\begin{verbatim}
+MODULE bdm
+
+/* Pinout */
+            -------
+       CK  | 1   24|  VCC
+      RES  | 2   23|  CKO
+    /DSCK  | 3   22|  FR-OUT
+  /DSI-IN  | 4   21|  DSO-OUT
+    /STEP  | 5   20|  LED0
+           | 6   19|  LED1
+           | 7   18|  LED2
+    LEDEN  | 8   17|  LED3
+           | 9   16|
+    FR-IN  |10   15|  /BKPT
+   DSO-IN  |11   14|  DSI-OUT
+      GND  |12   13|
+            -------
+
+
+
+
+/* Equations */
+
+BKPT = RES + /DSCK + Q;
+
+Q := 1;
+Q.AR = /STEP;
+CKO = /DSI-OUT + FR-IN;
+
+DSI-OUT = DSI-IN;
+DSI-OUT.OE = FR-IN;
+DSO-OUT = /(DSO-IN * FR-IN);
+
+FR-OUT = FR-IN;
+
+LED0 = FR-IN;
+LED1 = BKPT;
+LED2 = RES;
+LED3 = STEP;
+LED0.OE = LEDEN;
+LED1.OE = LEDEN;
+LED2.OE = LEDEN;
+LED3.OE = LEDEN;
+\end{verbatim}
+\normalsize
+
+The first function is simply implemented by connecting {\sc /res} to the
+equation for {\sc /bkpt}.
+
+To stop the normal execution of the CPU and enter BDM mode the
+{\sc dsck} line is held low until the CPU stops which is indicated by
+{\sc fr-in} going high. In this case. {\sc /ifetch} output becomes now
+the serial data input {\sc dsi}, thus the output driver of {\sc dsi-out}
+is enabled. The communication is fully bidirectional. Data lines are
+changed with a low to high transition of {\sc dsck} and have to be
+latched with the high to low transition. At the same time a new
+command is sent via the {\sc dsi} line, the possible values of a
+previous command are sent via {\sc dso}. The CPU returns from BDM mode
+after transmission of a GO command.
+
+For the single stepping function it is important to notice that the GO
+command ends with a 0, i.e. the last bit sent causes {\sc dsi} line to be
+low. After resuming normal mode (indicated by {\sc fr-in} going low) the
+{\sc /ifetch} function is turned on again. Hence, for a short while this
+line is floating before it is driven high (inactive) again. With a
+high to low transition of {\sc /ifetch} the CPU indicates a fetch bus
+cycle. In order to stop the CPU after this command again, this is the
+minimum period to wait for a new activation of {\sc /bkpt}. To avoid
+unintentional activation of {\sc /bkpt} during the floating period of
+{\sc /ifetch} the line is held low by a pull down resistor. To catch the
+negative edge of {\sc /ifetch} we use the negated signal as clock for
+register Q. If clocking is enabled through releasing of reset,
+i.e. {\sc step} going high, a 1 is clocked into Q causing activation of
+{\sc /bkpt} again. In order to have no interference with other functions as
+well as the normal execution mode of the CPU the {\sc step} signal has to be
+low in every other case.
+
+The physical implementation of the interface is very simple by the use
+of a GAL. Nevertheless, there is a problem which is caused by a
+usually too weak output driver of the parallel port. To have a
+convenient BDM interface the cable to the CPU can reach up to a length
+of 2m. The fast response in case of the single stepping functionality
+makes it desirable to have the GAL close to the CPU. Thus, a weak port
+output driver has a tremendous rise time in its signals which causes
+oscillating output signals of the GAL and hence destroys the whole
+transmission. To overcome this, a Schmitt trigger inverter was
+inserted for all signals going from the line printer output port to
+the GAL (cf. \ref{gal.fig}). Since this inverter is available in
+surface mount technology, it can be hidden in the plug for the
+parallel port.
+
+\btab{|c||c|c|c|c|}
+\hline
+    & \multicolumn{4}{c|}{Port bytes} \\ \cline{2-5}
+Bit & +0 & +1 & +2 & +3 \\ \hline\hline
+0x01 &      & -      & /strobe &      \\ \cline{3-4}
+0x02 &      & -      & /afeed  &      \\ \cline{3-4}
+0x04 &      & -      & /init   &      \\ \cline{3-4}
+0x08 & not  & /error & /selin  & not  \\ \cline{3-4}
+0x10 & used & -      & -       & used \\ \cline{3-4}
+0x20 &      & pend   & -       &      \\ \cline{3-4}
+0x40 &      & /ack   & -       &      \\ \cline{3-4}
+0x80 &      & /busy  & -       &      \\ \hline
+\etab{lptport}{Signals of the line printer port (LPT)}
+
+Finally, table \ref{lptport} gives an overview of the logical
+interface of the parallel port indicating the bit positions of all
+used signals.
+
+\end{document}

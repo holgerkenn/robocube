@@ -1,0 +1,230 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!--Converted with LaTeX2HTML 98.1p1 release (March 2nd, 1998)
+originally by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>Timing of the accesses to the binary output register</TITLE>
+<META NAME="description" CONTENT="Timing of the accesses to the binary output register">
+<META NAME="keywords" CONTENT="bustim">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<LINK REL="STYLESHEET" HREF="bustim.css">
+<LINK REL="next" HREF="node7.html">
+<LINK REL="previous" HREF="node2.html">
+<LINK REL="up" HREF="bustim.html">
+<LINK REL="next" HREF="node7.html">
+</HEAD>
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html76"
+ HREF="node7.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html74"
+ HREF="bustim.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html68"
+ HREF="node5.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html77"
+ HREF="node7.html">About this document ...</A>
+<B> Up:</B> <A NAME="tex2html75"
+ HREF="bustim.html">Interface to I</SUP>C bus</A>
+<B> Previous:</B> <A NAME="tex2html69"
+ HREF="node5.html">Interupt request cycles</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<H1><A NAME="SECTION00030000000000000000">
+Timing of the accesses to the binary output register</A>
+</H1>
+
+<P>
+The access to the fast binary output register ABT16823 is a simple
+write access to a memory mapped device, i.e. the clock enable for the
+register is decoded directly from the address bus. The register is
+clock with the disableing edge of /DS. So, the setup time is
+determined by the difference of the earliest disableing of /DS and the
+latest time, when data is valid.
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+t_s[abt16823] < T - t_{chdo}^+ + T/2 + t_{clsn}^-
+\end{displaymath} -->
+
+
+<I>t</I><SUB><I>s</I></SUB>[<I>abt</I>16823] &lt; <I>T</I> - <I>t</I><SUB><I>chdo</I></SUB><SUP>+</SUP> + <I>T</I>/2 + <I>t</I><SUB><I>clsn</I></SUB><SUP>-</SUP>
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+The hold time is guarantied by the minimum data hold time of the CPU
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+t_h[abt16823] < t_{sndoi}^-
+\end{displaymath} -->
+
+
+<I>t</I><SUB><I>h</I></SUB>[<I>abt</I>16823] &lt; <I>t</I><SUB><I>sndoi</I></SUB><SUP>-</SUP>
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+The more critical observation is, whether the clock enable signal is
+valid in time and is disabled again before the next CPU cycle starts.
+
+<P>
+In order to determine the timing of the clock enable, we distinguish
+two cases: the earliest CPU cycle <I>i</I><SUP>-</SUP> and the latest CPU cycle <I>i</I><SUP>+</SUP>where the GAL might produce a valid clock enable. Thus,
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<IMG
+ WIDTH="341" HEIGHT="84"
+ SRC="img20.gif"
+ ALT="\begin{eqnarray*}max \{ t_{as}^- , t_{rw}^- , t_{eq}^- , t_{adr}^- \} +
+t_s[GAL]...
+... , t_{rw}^+ , t_{eq}^+ , t_{adr}^+ \} +
+t_s[GAL] &\le& i^+ T \\
+\end{eqnarray*}">
+</DIV><P></P>
+<BR CLEAR="ALL">
+<P>
+with 
+<!-- MATH: $t_{eq}^- = t_{adr}^- + t_{pd}^-[als518]$ -->
+<I>t</I><SUB><I>eq</I></SUB><SUP>-</SUP> = <I>t</I><SUB><I>adr</I></SUB><SUP>-</SUP> + <I>t</I><SUB><I>pd</I></SUB><SUP>-</SUP>[<I>als</I>518] and 
+<!-- MATH: $t_{eq}^+ =
+t_{adr}^+ + t_{pd}^+[als518]$ -->
+<I>t</I><SUB><I>eq</I></SUB><SUP>+</SUP> =
+<I>t</I><SUB><I>adr</I></SUB><SUP>+</SUP> + <I>t</I><SUB><I>pd</I></SUB><SUP>+</SUP>[<I>als</I>518]. Since the minimum propagation delay of
+the ALS518 is very short the earliest cycle is clearly determined by
+the address strobe. Because 
+<!-- MATH: $T/2 \ge 20$ -->
+<IMG
+ WIDTH="81" HEIGHT="37" ALIGN="MIDDLE" BORDER="0"
+ SRC="img21.gif"
+ ALT="$T/2 \ge 20$">
+and <I>t</I><SUB><I>as</I></SUB><SUP>-</SUP> certainly less
+than <I>T</I>/2 - 7.0 it follows that
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+i^- = 1
+\end{displaymath} -->
+
+
+<I>i</I><SUP>-</SUP> = 1
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+A similar observation yields to the result
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+i^+ = 2
+\end{displaymath} -->
+
+
+<I>i</I><SUP>+</SUP> = 2
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+With these precalculations the timing of the clock enable is now fixed
+to
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+t_{regce}^- = T + 1.0 \quad ; \quad t_{regce}^+ = 2T + 7.0
+\end{displaymath} -->
+
+
+<IMG
+ WIDTH="305" HEIGHT="36"
+ SRC="img22.gif"
+ ALT="\begin{displaymath}t_{regce}^- = T + 1.0 \quad ; \quad t_{regce}^+ = 2T + 7.0 \end{displaymath}">
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+In order to guarantee proper operation the latest clock enable has to
+be earlier than the earliest clock, which is /DS.
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+<!-- MATH: \begin{displaymath}
+t_{regce}^+ < t_{ds}^- \Leftrightarrow 2T + 7 < 5/2 T + t_{clsn}^-
+\Leftrightarrow T/2 > 7 - t_{clsn}^-
+\end{displaymath} -->
+
+
+<IMG
+ WIDTH="443" HEIGHT="36"
+ SRC="img23.gif"
+ ALT="\begin{displaymath}t_{regce}^+ < t_{ds}^- \Leftrightarrow 2T + 7 < 5/2 T + t_{clsn}^-
+\Leftrightarrow T/2 > 7 - t_{clsn}^- \end{displaymath}">
+</DIV>
+<BR CLEAR="ALL">
+<P></P>
+
+<P>
+The same observation as for the enableing holds also for the
+disabling, i.e. the disableing is certainly before the next active
+edge of /DS.
+
+<P>
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html76"
+ HREF="node7.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/next_motif.gif"></A> 
+<A NAME="tex2html74"
+ HREF="bustim.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/up_motif.gif"></A> 
+<A NAME="tex2html68"
+ HREF="node5.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="/opt/TeX/lib/latex2html/icons.gif/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html77"
+ HREF="node7.html">About this document ...</A>
+<B> Up:</B> <A NAME="tex2html75"
+ HREF="bustim.html">Interface to I</SUP>C bus</A>
+<B> Previous:</B> <A NAME="tex2html69"
+ HREF="node5.html">Interupt request cycles</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+<I>Thomas Walle</I>
+<BR><I>1999-05-18</I>
+</ADDRESS>
+</BODY>
+</HTML>
